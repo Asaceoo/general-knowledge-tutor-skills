@@ -13,7 +13,8 @@ general-knowledge-tutor/
 ├── references/
 │   ├── manim-patterns.md          # Manim 分镜规范 + 4 个可复用 Scene 模板 + 渲染/降级
 │   ├── visualization-cookbook.md  # matplotlib/plotly/SVG/交互 HTML 速查模板
-│   └── 3d-animation.md            # 3D 四层选型（mplot3d/Three.js/ThreeDScene/plotly）+ 坑清单
+│   ├── 3d-animation.md            # 3D 五层选型（mplot3d/PyVista/vpython/Three.js/Blender bpy/ThreeDScene/plotly）+ 坑清单
+│   └── extended-viz.md            # 扩展工具箱（ECharts/D3/p5.js/pyvis/schemdraw/Motion Canvas/GeoGebra/Desmos）+ 表达方式
 ├── test-prompts.json              # 触发测试用例（should_trigger / should_not_trigger）
 ├── README.md                      # 用户手册
 └── TECHNICAL.md                   # 本文件
@@ -56,7 +57,11 @@ general-knowledge-tutor/
 | 数据/分布/关系 | matplotlib / plotly | SVG 手绘 |
 | 概念/体系/依赖 | Mermaid / SVG | 文本缩进树 |
 | 可探索参数 | HTML widget（滑块+canvas） | 静态多状态图 |
-| 空间结构/旋转/场 | 3D（四层选型见 §3.3） | 多视角 3D PNG |
+| 空间结构/旋转/场 | 3D（五层选型见 §3.3） | 多视角 3D PNG |
+| 场/曲面/体渲染 | PyVista | mplot3d 多视角 PNG |
+| 物理/轨道/仿真教学 | vpython | p5.js 动画 / 分步静态图 |
+| 函数/几何交互探索 | GeoGebra / Desmos iframe | 滑块 HTML widget |
+| 网络/关系/流向 | pyvis / graphviz；桑基等用 ECharts | Mermaid 手写 |
 
 **3D 启用门槛**：仅当空间结构本身承载信息（旋转→振荡、螺旋、场、曲面、轨道）时启用；2D 能讲清的不上 3D。
 
@@ -91,14 +96,31 @@ general-knowledge-tutor/
 | Three.js CDN 加载失败 | `typeof THREE === 'undefined'` 检测 → 显示降级文案并指向静态 GIF |
 | Manim 系统依赖（cairo/pango/ffmpeg） | 安装失败即走降级链，不阻塞交付 |
 
-### 3.3 3D 四层选型
+### 3.3 3D 五层选型
 
 | 层 | 方案 | 依赖 | 产物 | 适用 |
 |---|---|---|---|---|
-| A | matplotlib mplot3d → GIF | numpy+matplotlib | .gif | 真机渲染动画（零新增依赖，兜底主力） |
-| B | Three.js r128（CDN） | 浏览器 | 内联 script | 卡内可拖拽探索（查看时需联网） |
-| C | Manim `ThreeDScene` | manim | .mp4 | 电影级交付动画 |
-| D | plotly 3D | plotly | 自包含 .html | 数据曲面/散点探索 |
+| A | matplotlib mplot3d → GIF | numpy+matplotlib | .gif | 零依赖兜底（任何环境可用） |
+| B | PyVista | pip | .gif/.png/交互 .html | 质量主力：场/曲面/体渲染，深度排序正确 |
+| C | vpython | pip | 自包含 .html | 教学仿真：轨道/波/刚体，浏览器可交互 |
+| D | Three.js r128（CDN） | 浏览器 | 内联 script | 卡内可拖拽探索（查看时需联网） |
+| E | Blender bpy 无头渲染 | 本机 Blender | PNG 序列→.gif/.mp4 | 电影级质感/运镜（无需 Manim） |
+| F | Manim `ThreeDScene` | manim | .mp4 | 已装 Manim 时的 3D |
+| G | plotly 3D | plotly | 自包含 .html | 数据曲面/散点探索 |
+
+### 3.5 扩展工具箱（references/extended-viz.md）
+
+按「填补空白」准入，模板含最小可运行示例 + 降级链：
+
+- **ECharts**（CDN）：桑基/和弦/热力日历/关系图，中文最友好 → 降级 matplotlib
+- **D3.js**（CDN）：完全自定义交互（力导向图等）→ 降级 ECharts
+- **p5.js**（CDN）：粒子流场等过程动画 → 降级 streamplot 静态图
+- **pyvis / graphviz**（pip）：Phase 2 DAG 自动布局 → 降级 Mermaid
+- **schemdraw**（pip）：电路/原理示意图 → 降级 SVG 手绘
+- **GeoGebra / Desmos**（iframe）：函数/几何调参探索零代码 → 降级自写 widget
+- **Motion Canvas**（Node）：时间轴级程序化动画 → 降级 Manim
+
+表达方式层（跨工具）：滚动叙事（scrollytelling，适配 Phase 1 推理链）、小倍数图（参数族）、粒子流场、物理仿真驱动、reveal.js 交互幻灯、rough.js 手绘风。
 
 ### 3.4 交互组件交付策略
 
@@ -153,4 +175,5 @@ SKILL.md 内置 6 条反模式→替代做法对照（编造数据、伪产物�
 
 ## 7. 版本
 
+- v1.1.0（2026-10-05）：扩展可视化工具箱——3D 五层选型（+PyVista/vpython/Blender bpy）、新增 references/extended-viz.md（ECharts/D3/p5.js/pyvis/schemdraw/Motion Canvas/GeoGebra/Desmos + 表达方式层）、Phase 4 选型矩阵扩至 10 行。
 - v1.0.0（2026-10-05）：首个开源版本。通用化改造（平台适配层），含用户手册/技术手册/触发测试用例。
