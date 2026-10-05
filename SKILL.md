@@ -85,7 +85,11 @@ compatibility: >-
 | 数据 / 分布 / 关系 | 图表 | matplotlib / plotly | SVG 手绘 |
 | 概念 / 体系 / 依赖 | 图 | Mermaid / SVG | 文本缩进树 |
 | 可探索参数 | 交互组件 | 内联/独立 HTML widget（滑块 + canvas/SVG） | 静态多状态图 |
-| 空间结构 / 旋转 / 螺旋 / 场 | 3D 动画 / 交互 3D | matplotlib mplot3d→GIF（零依赖）；Three.js 内联交互；Manim ThreeDScene（见 references/3d-animation.md） | 静态 3D 多视角 PNG |
+| 空间结构 / 旋转 / 螺旋 / 场 | 3D 动画 / 交互 3D | **五层选型**（见 references/3d-animation.md）：mplot3d→GIF（零依赖兜底）→ PyVista（质量主力）→ vpython（教学仿真）→ Three.js（卡内交互）→ Blender bpy（电影级） | 静态 3D 多视角 PNG |
+| 场 / 曲面 / 体渲染 | 3D 科学可视化 | PyVista（深度排序正确，见 references/extended-viz.md） | matplotlib mplot3d 多视角 PNG |
+| 物理 / 轨道 / 仿真教学 | 3D 仿真动画 | vpython（几行代码出动画，见 references/extended-viz.md） | p5.js 动画 / 分步静态图 |
+| 函数 / 几何交互探索 | 内嵌 applet | GeoGebra / Desmos iframe（见 references/extended-viz.md） | 滑块 HTML widget |
+| 网络 / 关系 / 流向 | 自动布局图 | pyvis / graphviz；桑基/和弦/热力日历用 ECharts（见 references/extended-viz.md） | Mermaid 手写 |
 
 > 3D 启用门槛：仅在「空间结构本身承载信息」时使用（旋转→振荡、螺旋、场、曲面、轨道）；能用 2D 讲清的不上 3D。选型与坑（深度伪影、无缝环绕、CDN 降级）见 references/3d-animation.md。
 
@@ -160,4 +164,5 @@ compatibility: >-
 
 - `references/manim-patterns.md`：可复用 Manim 场景模板、分镜格式、渲染命令与降级方案。
 - `references/visualization-cookbook.md`：matplotlib/plotly/SVG/交互 HTML 组件速查与模板。
-- `references/3d-animation.md`：3D 选型决策（mplot3d GIF / Three.js 交互 / Manim ThreeDScene / plotly）+ 模板与坑（深度伪影、无缝环绕、体积控制、CDN 降级）。
+- `references/3d-animation.md`：3D **五层选型**（mplot3d / PyVista / vpython / Three.js / Blender bpy / Manim ThreeDScene）+ 模板与坑（深度伪影、无缝环绕、体积控制、CDN 降级）。
+- `references/extended-viz.md`：扩展可视化工具箱（ECharts / D3 / p5.js / pyvis / schemdraw / Motion Canvas / GeoGebra / Desmos）+ 表达方式（滚动叙事 / 小倍数图 / 粒子流场 / 交互幻灯）模板与降级链。
