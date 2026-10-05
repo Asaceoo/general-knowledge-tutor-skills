@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "date": "2026-10-05",
+  "prompts": [
+    {
+      "id": "typical-1",
+      "type": "should_trigger",
+      "text": "用第一性原理讲讲熵到底是什么，最好画出来"
+    },
+    {
+      "id": "typical-2",
+      "type": "should_trigger",
+      "text": "梯度下降我老是没直觉，做个动画帮我理解"
+    },
+    {
+      "id": "typical-3",
+      "type": "should_trigger",
+      "text": "我想入门宏观经济学，给我建个体系"
+    },
+    {
+      "id": "ambiguous-1",
+      "type": "should_trigger",
+      "text": "复利是不是就是利滚利？讲讲本质"
+    },
+    {
+      "id": "near-miss-1",
+      "type": "should_not_trigger",
+      "text": "帮我写一个 Python 脚本批量重命名文件"
+    },
+    {
+      "id": "near-miss-2",
+      "type": "should_not_trigger",
+      "text": "把这个 Excel 表按销售额排序"
+    }
+  ],
+  "judge_criteria": "should_trigger 的 query 应命中本技能（进入 Phase 0）；should_not_trigger 的 query 不得命中。命中标准：智能体主动采用本技能的工作流而非普通问答。"
+}
