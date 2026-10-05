@@ -53,7 +53,11 @@ cp -r general-knowledge-tutor-skills ~/.claude/skills/general-knowledge-tutor   
 |---|---|---|
 | Python 3.10+ + numpy + matplotlib | 图表 / GIF 动画（主力兜底） | 无 Python 时产出可复制的脚本，请用户运行 |
 | manim（`pip install manim`） | 电影级动画 mp4 | 自动降级为 matplotlib GIF + SVG，并在交付中注明 |
-| 浏览器 | 查看交互式 HTML 组件 | — |
+| pyvista / vpython（可选） | 3D 科学可视化 / 物理教学仿真 | 自动降级为 mplot3d GIF 或 p5.js 动画 |
+| 本机 Blender（可选） | 电影级 3D 渲染（bpy 无头渲染，无需 Manim） | 跳过，用其他 3D 层 |
+| 浏览器 | 查看交互式 HTML 组件（含 ECharts/D3/p5.js/GeoGebra/Desmos 扩展组件） | — |
+
+> 完整工具箱（含选型矩阵与降级链）见 `references/extended-viz.md` 与 [TECHNICAL.md](TECHNICAL.md) §3.5。
 
 ## 三、快速上手（30 秒）
 
