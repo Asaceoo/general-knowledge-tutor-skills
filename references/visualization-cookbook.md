@@ -26,6 +26,8 @@ fig.savefig("limit_curve.png", dpi=120)
 
 **多帧合成 GIF（替代 Manim 动画）**：
 ```python
+import numpy as np                          # 本块可独立复制运行（不依赖上一块）
+import matplotlib.pyplot as plt
 import matplotlib.animation as ani
 fig, ax = plt.subplots()
 line, = ax.plot([], [])
