@@ -98,6 +98,7 @@ general-knowledge-tutor/
 | GIF 体积失控 | dpi 85–95、60 帧、fps 16–20，目标 ≤2 MB（base64 内嵌后 ×1.33） |
 | Three.js CDN 加载失败 | `typeof THREE === 'undefined'` 检测 → 显示降级文案并指向静态 GIF |
 | Manim 系统依赖（cairo/pango/ffmpeg） | 安装失败即走降级链，不阻塞交付 |
+| 自测 HTML 题目/选项含 `<` `&` 破版式或 `<img onerror>` 注入 | 模板内置 `esc()` 转义所有动态插值（v1.3.0 实测：注入不执行、判分不回归）；生成题目时避免数据含字面 `</script>`（会截断 HTML 解析层，转义不可防，必要时写 `<\/script>`） |
 
 ### 3.3 3D 五层选型
 
@@ -125,6 +126,12 @@ general-knowledge-tutor/
 
 表达方式层（跨工具）：滚动叙事（scrollytelling，适配 Phase 1 推理链）、小倍数图（参数族）、粒子流场、物理仿真驱动、reveal.js 交互幻灯、rough.js 手绘风。
 
+### 3.5 交互组件交付策略
+
+1. 宿主有内联 HTML 能力（如 WorkBuddy widget）→ 原始 HTML 片段交付；
+2. 否则 → 独立 `.html` 文件落盘 + 回复中给路径。
+两种路径最终产物等价，均为「滑块驱动 canvas/SVG 重绘」的自包含组件。
+
 ### 3.6 扩展工具箱第二批次（references/extended-viz-2.md，v1.2.0，全部真机实测）
 
 - **Mermaid**（文本即图）：体系 DAG/流程/状态机 Markdown 原生渲染，零脚本零产物 → 降级 graphviz 出 PNG
@@ -133,13 +140,7 @@ general-knowledge-tutor/
 - **交互自测 HTML + genanki**（零依赖/pip）：自检问题 → 判分组件（实测 headless 5/5）+ Anki .apkg 记忆卡 → 降级 md 内自检问题
 - **trimesh → glb → model-viewer**（pip/CDN）：代码造 3D 模型，glb **base64 内嵌**单 HTML 双击即用（实测截图渲染通过）→ 降级 mp4/GIF（3D 五层）
 
-第二批次实测坑（7 条，详见 extended-viz-2.md 各节坑表）：PillowWriter 不支持 with 上下文、Unicode 下标 U+2080 缺字形（改 mathtext）、trimesh 5.x 无 torus_knot、glb 导出+设色需 scipy、model-viewer file:// CORS 拦 glb（必须 base64 内嵌或 http 服务）、headless WebGL 需 --enable-unsafe-swiftshader、Chrome 截图对工作区目录写文件被拒（指向 %TEMP%）。
-
-### 3.5 交互组件交付策略
-
-1. 宿主有内联 HTML 能力（如 WorkBuddy widget）→ 原始 HTML 片段交付；
-2. 否则 → 独立 `.html` 文件落盘 + 回复中给路径。
-两种路径最终产物等价，均为「滑块驱动 canvas/SVG 重绘」的自包含组件。
+第二批次实测坑（9 条，详见 extended-viz-2.md 各节坑表）：pymunk 只 add joint 不 add body = 模拟静默不发生（必须 `space.add(body, joint)`，测周期函数加 `len(zeros)<2` 抛错守卫）、genanki Deck/Model ID 一经发布必须固定（随机 ID 会在 Anki 重复建组）、PillowWriter 不支持 with 上下文、Unicode 下标 U+2080 缺字形（改 mathtext）、trimesh 5.x 无 torus_knot、glb 导出+设色需 scipy、model-viewer file:// CORS 拦 glb（必须 base64 内嵌或 http 服务）、headless WebGL 需 --enable-unsafe-swiftshader、Chrome 截图对工作区目录写文件被拒（指向 %TEMP%）。
 
 ## 4. 平台适配层
 
@@ -198,6 +199,7 @@ SKILL.md 内置 6 条反模式→替代做法对照（编造数据、伪产物�
 
 ## 7. 版本
 
+- v1.3.0（2026-10-06）：第三批对抗性审查（R4-1~R4-8）：quiz 模板 esc 转义防注入（双 Case 真机对照）；package.py 边界校验 + 手册版本号自动递增（README/TECHNICAL/test-prompts 三处联动）；TECHNICAL §3.5/3.6 顺序修正 + 坑表补全 9 条；README 过度承诺措辞修正；SKILL.md 主题名净化规则
 - v1.2.2（2026-10-06）：鲁班第三轮评审（基线 94.1，ROI 网关触发跳过优化循环）——修正 SKILL.md L195 坑表计数（7 条→9 条：pymunk 4 + genanki 1 + glb 4，dim6 恢复满分）；WorkBuddy 部署副本 references 同步（补齐 extended-viz-2.md / audit-checklist.md / templates，消除 5 处引用不可达与旧版无 ravel 修复问题）。回归 25 PASS / 2 SKIP / 0 FAIL（独立子 agent 复跑复核）。
 - v1.2.1（2026-10-06）：三视角对抗性审查修复（台账见 references/audit-checklist.md，13 项）——pymunk 模板静默不模拟 bug（space.add 补 body + 测周期守卫）、PyVista 多维标量 ravel、vpython/setuptools≥81 坑、graphviz dot.exe 坑、quiz 模板入库 references/templates/、Manim 版本断言实测校正（0.21.0@3.13.14）、触发词/测试用例扩充（12 条）、章节序修正；回归脚本 scripts/regression.py（25 PASS/2 SKIP/0 FAIL）；新增 VERSION 单一来源 + scripts/package.py 自动递增打包。
 - v1.2.0（2026-10-06）：扩展工具箱第二批次——新增 references/extended-viz-2.md（Mermaid / pymunk / edge-tts / 交互自测 HTML + genanki / trimesh→model-viewer 3D 单文件交付），**五类模板全部真机实测**（pymunk 单摆出 GIF+周期数据、edge-tts 出 mp3、genanki 出 apkg、自测 HTML headless 判分 5/5、model-viewer 截图渲染验证），7 条实测坑回填；Phase 4 选型矩阵扩至 13 行。
