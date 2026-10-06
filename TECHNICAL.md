@@ -125,6 +125,16 @@ general-knowledge-tutor/
 
 表达方式层（跨工具）：滚动叙事（scrollytelling，适配 Phase 1 推理链）、小倍数图（参数族）、粒子流场、物理仿真驱动、reveal.js 交互幻灯、rough.js 手绘风。
 
+### 3.6 扩展工具箱第二批次（references/extended-viz-2.md，v1.2.0，全部真机实测）
+
+- **Mermaid**（文本即图）：体系 DAG/流程/状态机 Markdown 原生渲染，零脚本零产物 → 降级 graphviz 出 PNG
+- **pymunk**（pip，2D 刚体物理）：真实引擎计算，实测单摆 θ₀=60° 周期 +7.37%（理论 1+θ²/16=+6.85% 吻合）→ 降级 matplotlib 手绘帧
+- **edge-tts**（pip，中文语音）：免费 TTS 出讲解 mp3（实测 203KB/40s，沙箱可达）→ 降级纯文字通俗版
+- **交互自测 HTML + genanki**（零依赖/pip）：自检问题 → 判分组件（实测 headless 5/5）+ Anki .apkg 记忆卡 → 降级 md 内自检问题
+- **trimesh → glb → model-viewer**（pip/CDN）：代码造 3D 模型，glb **base64 内嵌**单 HTML 双击即用（实测截图渲染通过）→ 降级 mp4/GIF（3D 五层）
+
+第二批次实测坑（7 条，详见 extended-viz-2.md 各节坑表）：PillowWriter 不支持 with 上下文、Unicode 下标 U+2080 缺字形（改 mathtext）、trimesh 5.x 无 torus_knot、glb 导出+设色需 scipy、model-viewer file:// CORS 拦 glb（必须 base64 内嵌或 http 服务）、headless WebGL 需 --enable-unsafe-swiftshader、Chrome 截图对工作区目录写文件被拒（指向 %TEMP%）。
+
 ### 3.4 交互组件交付策略
 
 1. 宿主有内联 HTML 能力（如 WorkBuddy widget）→ 原始 HTML 片段交付；
@@ -188,6 +198,7 @@ SKILL.md 内置 6 条反模式→替代做法对照（编造数据、伪产物�
 
 ## 7. 版本
 
+- v1.2.0（2026-10-06）：扩展工具箱第二批次——新增 references/extended-viz-2.md（Mermaid / pymunk / edge-tts / 交互自测 HTML + genanki / trimesh→model-viewer 3D 单文件交付），**五类模板全部真机实测**（pymunk 单摆出 GIF+周期数据、edge-tts 出 mp3、genanki 出 apkg、自测 HTML headless 判分 5/5、model-viewer 截图渲染验证），7 条实测坑回填；Phase 4 选型矩阵扩至 13 行。
 - v1.1.4（2026-10-06）：双文档文件命名强制中文——主卡 `[主题]—通识可视化学习卡.md`、通俗版 `[主题]—通俗版.md`（禁止拼音/英文文件名）；可视化产物与 md 同目录、相对路径引用。经「电流」实测交付验证（`电流—通识可视化学习卡.md` / `电流—通俗版.md`）。
 - v1.1.3（2026-10-06）：Phase 5 升级双文档交付——主卡 + 通俗版（固定骨架 + 三条防漂移硬规则：共用事实/术语翻译/篇幅≤40%）；速览档仅交付通俗版。
 - v1.1.2（2026-10-05）：鲁班第二轮优化（86.1→88.45）：执行顺序硬化、渲染限时 3 分钟条款、反例黑名单扩至 8 条、设计原则去重。
