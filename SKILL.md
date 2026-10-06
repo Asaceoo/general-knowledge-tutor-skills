@@ -90,6 +90,9 @@ compatibility: >-
 | 物理 / 轨道 / 仿真教学 | 3D 仿真动画 | vpython（几行代码出动画，见 references/extended-viz.md） | p5.js 动画 / 分步静态图 |
 | 函数 / 几何交互探索 | 内嵌 applet | GeoGebra / Desmos iframe（见 references/extended-viz.md） | 滑块 HTML widget |
 | 网络 / 关系 / 流向 | 自动布局图 | pyvis / graphviz；桑基/和弦/热力日历用 ECharts（见 references/extended-viz.md） | Mermaid 手写 |
+| 结构 / 流程 / 状态机 / 体系 DAG | 文本即图 | **Mermaid**（Markdown 原生渲染，见 references/extended-viz-2.md） | graphviz 出 PNG |
+| 力学 / 碰撞 / 真实物理过程 | 物理引擎模拟 | **pymunk**（真实数值计算 + 近似失效边界，见 references/extended-viz-2.md） | matplotlib 手绘帧动画 |
+| 讲解可听化 / 3D 可交互 / 自测闭环 | 配音 / 单文件 3D / 测验 | **edge-tts**（中文语音）+ **model-viewer**（glb 内嵌 HTML）+ 自测 HTML/genanki（见 references/extended-viz-2.md） | 纯文字通俗版 / mp4 动画 |
 
 > 3D 启用门槛：仅在「空间结构本身承载信息」时使用（旋转→振荡、螺旋、场、曲面、轨道）；能用 2D 讲清的不上 3D。选型与坑（深度伪影、无缝环绕、CDN 降级）见 references/3d-animation.md。
 
@@ -189,3 +192,4 @@ compatibility: >-
 - `references/visualization-cookbook.md`：matplotlib/plotly/SVG/交互 HTML 组件速查与模板。
 - `references/3d-animation.md`：3D **五层选型**（mplot3d / PyVista / vpython / Three.js / Blender bpy / Manim ThreeDScene）+ 模板与坑（深度伪影、无缝环绕、体积控制、CDN 降级）。
 - `references/extended-viz.md`：扩展可视化工具箱（ECharts / D3 / p5.js / pyvis / schemdraw / Motion Canvas / GeoGebra / Desmos）+ 表达方式（滚动叙事 / 小倍数图 / 粒子流场 / 交互幻灯）模板与降级链。
+- `references/extended-viz-2.md`：扩展工具箱**第二批次**（全部真机实测）：Mermaid 文本即图 / pymunk 物理引擎真实模拟 / edge-tts 中文语音讲解 / 交互自测 HTML + genanki Anki 记忆卡学习闭环 / trimesh→glb→model-viewer 3D 单文件交付；含 7 条实测坑（PillowWriter 上下文、Unicode 下标缺字形、glb file:// CORS 等）。
