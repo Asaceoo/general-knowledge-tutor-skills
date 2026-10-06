@@ -40,12 +40,13 @@ const QUIZ = [
     exp:"1C÷1.6×10⁻¹⁹C≈6.24×10¹⁸ 个/秒。" },
 ];
 
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const quiz = document.getElementById("quiz");
 QUIZ.forEach((it, qi) => {
   const div = document.createElement("div"); div.className = "q";
-  div.innerHTML = `<h3>${qi+1}. ${it.q}</h3>` +
-    it.opts.map((o, oi) => `<label data-q="${qi}" data-o="${oi}"><input type="radio" name="q${qi}" value="${oi}"> ${o}</label>`).join("") +
-    `<div class="exp" id="exp${qi}">✔ ${it.exp}</div>`;
+  div.innerHTML = `<h3>${qi+1}. ${esc(it.q)}</h3>` +
+    it.opts.map((o, oi) => `<label data-q="${qi}" data-o="${oi}"><input type="radio" name="q${qi}" value="${oi}"> ${esc(o)}</label>`).join("") +
+    `<div class="exp" id="exp${qi}">✔ ${esc(it.exp)}</div>`;
   quiz.appendChild(div);
 });
 
