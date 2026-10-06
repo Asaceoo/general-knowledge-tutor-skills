@@ -34,9 +34,11 @@ general-knowledge-tutor/
 ## 2. 五阶段工作流规范
 
 ### Phase 0 意图定位
-输入：用户 query。输出：`(主题, 深度∈{速览, 精通, 输出}, 基础∈{零基础, 有背景, 专业})`。
-未确认时的默认值：`(体系化精通, 有相关背景)`，且必须在交付物开头标注假设。
-**门控 🔴 CHECKPOINT**：三项确认（或超时走默认）才可进入 Phase 1。
+输入：用户 query。输出：`(主题, 深度∈{速览,精通,输出}, 覆盖∈{单点,带前置,完整体系}, 基础∈{零基础,有背景,专业}, 可视化⊆{动画,交互图,3D,配音,记忆卡})`。
+确认方式：用提问能力弹结构化选项（单选/多选），禁止开放式追问；用户已给则跳过该项。
+组合规则：深度=速览时忽略可视化与覆盖范围（只出通俗版）；覆盖范围默认对齐深度（速览→单点，精通→带前置，输出→完整体系），显式指定则覆盖。
+未确认时的默认值：`(精通, 带前置, 有相关背景, 可视化自动)`，且必须在交付物开头标注假设。
+**门控 🔴 CHECKPOINT**：五项确认（或超时走默认）才可进入 Phase 1。
 
 ### Phase 1 第一性原理拆解
 产出三件套：假设清单（3–6 条，区分承重/情景）、原子事实（每条标来源类型）、推理链（每步「A+B→C」）。推理链是 Phase 3 讲解与 Phase 4 分镜的主干，不允许后补。
@@ -199,6 +201,7 @@ SKILL.md 内置 6 条反模式→替代做法对照（编造数据、伪产物�
 
 ## 7. 版本
 
+- v1.4.0（2026-10-06）：Phase 0 升级结构化选项确认：新增主题覆盖范围（单点/带前置/完整体系）与可视化形式多选（动画/交互图/3D/配音/记忆卡）两个维度，改为禁止开放式追问、缺省策略兜底、组合规则防维度冲突；README 指令速查表补说法、test-prompts 补 typical-7
 - v1.3.0（2026-10-06）：第三批对抗性审查（R4-1~R4-8）：quiz 模板 esc 转义防注入（双 Case 真机对照）；package.py 边界校验 + 手册版本号自动递增（README/TECHNICAL/test-prompts 三处联动）；TECHNICAL §3.5/3.6 顺序修正 + 坑表补全 9 条；README 过度承诺措辞修正；SKILL.md 主题名净化规则
 - v1.2.2（2026-10-06）：鲁班第三轮评审（基线 94.1，ROI 网关触发跳过优化循环）——修正 SKILL.md L195 坑表计数（7 条→9 条：pymunk 4 + genanki 1 + glb 4，dim6 恢复满分）；WorkBuddy 部署副本 references 同步（补齐 extended-viz-2.md / audit-checklist.md / templates，消除 5 处引用不可达与旧版无 ravel 修复问题）。回归 25 PASS / 2 SKIP / 0 FAIL（独立子 agent 复跑复核）。
 - v1.2.1（2026-10-06）：三视角对抗性审查修复（台账见 references/audit-checklist.md，13 项）——pymunk 模板静默不模拟 bug（space.add 补 body + 测周期守卫）、PyVista 多维标量 ravel、vpython/setuptools≥81 坑、graphviz dot.exe 坑、quiz 模板入库 references/templates/、Manim 版本断言实测校正（0.21.0@3.13.14）、触发词/测试用例扩充（12 条）、章节序修正；回归脚本 scripts/regression.py（25 PASS/2 SKIP/0 FAIL）；新增 VERSION 单一来源 + scripts/package.py 自动递增打包。
