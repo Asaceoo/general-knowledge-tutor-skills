@@ -173,7 +173,7 @@ for q, a in CARDS:
 genanki.Package(deck).write_to_file("electric-current.apkg")
 ```
 
-**坑表**：Deck/Model 的 ID 一经发布**必须固定**（随机 ID 会导致 Anki 里重复建组）；ID 生成取 `random.randrange(1<<30, 1<<31)` 一次并写死在模板常量里。
+**坑表**：Deck/Model 的 ID 一经发布**必须固定**（随机 ID 会导致 Anki 里重复建组）；ID 生成取 `random.randrange(1<<30, 1<<31)` 一次并写死在模板常量里。题目/选项文本中的 `<` `&` 由模板 `esc()` 统一转义（2026-10-06 对抗实测：`<img onerror>` 注入不执行、`a<b` 不破版式、判分不回归）；**QUIZ 源码内联数据避免出现字面 `</script>`**——它会在 HTML 解析层截断脚本块，任何运行时转义都救不了，必要时写 `<\/script>`。
 
 ---
 
