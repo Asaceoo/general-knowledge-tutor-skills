@@ -131,7 +131,8 @@ net.write_html("dag.html")          # 自包含 HTML（含 CDN，可离线微调
 ```
 
 ```python
-# graphviz：静态专业布局（需系统安装 graphviz 或 pip install graphviz）
+# graphviz：静态专业布局（坑：pip install graphviz 只装 Python 绑定，渲染还必须单独装
+# Graphviz 系统包提供 dot.exe——实测 pip 装好仍报 ExecutableNotFound；无 dot.exe 时直接降级 pyvis/Mermaid）
 from graphviz import Digraph
 g = Digraph(format="svg")
 g.edges([("极限", "连续"), ("连续", "导数"), ("函数", "极限")])
