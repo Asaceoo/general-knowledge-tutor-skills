@@ -192,4 +192,4 @@ compatibility: >-
 - `references/visualization-cookbook.md`：matplotlib/plotly/SVG/交互 HTML 组件速查与模板。
 - `references/3d-animation.md`：3D **五层选型**（mplot3d / PyVista / vpython / Three.js / Blender bpy / Manim ThreeDScene）+ 模板与坑（深度伪影、无缝环绕、体积控制、CDN 降级）。
 - `references/extended-viz.md`：扩展可视化工具箱（ECharts / D3 / p5.js / pyvis / schemdraw / Motion Canvas / GeoGebra / Desmos）+ 表达方式（滚动叙事 / 小倍数图 / 粒子流场 / 交互幻灯）模板与降级链。
-- `references/extended-viz-2.md`：扩展工具箱**第二批次**（全部真机实测）：Mermaid 文本即图 / pymunk 物理引擎真实模拟 / edge-tts 中文语音讲解 / 交互自测 HTML + genanki Anki 记忆卡学习闭环 / trimesh→glb→model-viewer 3D 单文件交付；含 7 条实测坑（PillowWriter 上下文、Unicode 下标缺字形、glb file:// CORS 等）。
+- `references/extended-viz-2.md`：扩展工具箱**第二批次**（全部真机实测）：Mermaid 文本即图 / pymunk 物理引擎真实模拟 / edge-tts 中文语音讲解 / 交互自测 HTML + genanki Anki 记忆卡学习闭环 / trimesh→glb→model-viewer 3D 单文件交付；含 9 条实测坑（PillowWriter 上下文、pymunk 静默坑、Unicode 下标缺字形、glb file:// CORS 等）。
