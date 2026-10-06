@@ -37,7 +37,20 @@ def bump(ver, level):
     if level not in ("patch", "minor", "major"):
         fail(f"--bump 仅支持 patch / minor / major，收到: {level!r}")
     a, b, c = (int(x) for x in ver.split("."))
-    return {"major": f"{a+1}.0.0", "minor": f"{a}.{b+1}.0", "patch": f"{a}.{b}.{c}"}[level]
+    new = {"major": f"{a+1}.0.0", "minor": f"{a}.{b+1}.0", "patch": f"{a}.{b}.{c+1}"}[level]
+    if new == ver:  # 防御：任何档位都必须产生变化，避免静默打同名产物
+        fail(f"版本递增失败：{level} 档计算后仍为 {ver}（禁止静默复用旧版本号）")
+    return new
+
+
+def opt_val(flag):
+    """安全取 `--flag <值>`：缺值 / 置于末位 / 后接另一个 flag 时优雅报错，不抛 IndexError。"""
+    if flag not in sys.argv:
+        return None
+    i = sys.argv.index(flag)
+    if i + 1 >= len(sys.argv) or sys.argv[i + 1].startswith("--"):
+        fail(f"{flag} 后缺少取值（正确用法：{flag} <值>）")
+    return sys.argv[i + 1]
 
 def sync_manuals(new_ver, note):
     """--bump 后把新版本号同步进用户手册 / 技术手册 / 测试用例。"""
@@ -94,10 +107,11 @@ def collect_files():
 
 def main():
     note = "版本发布（package.py 自动登记，变更摘要见 git log 与 audit-checklist）"
-    if "--note" in sys.argv:
-        note = sys.argv[sys.argv.index("--note") + 1]
+    nv = opt_val("--note")
+    if nv is not None:
+        note = nv
     if "--bump" in sys.argv:
-        level = sys.argv[sys.argv.index("--bump") + 1]
+        level = opt_val("--bump")
         old = read_version()
         new = bump(old, level)
         open(VERSION_FILE, "w", encoding="utf-8").write(new + "\n")
