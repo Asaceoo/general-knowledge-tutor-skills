@@ -58,7 +58,7 @@ cp -r general-knowledge-tutor-skills ~/.claude/skills/general-knowledge-tutor   
 | 浏览器 | 查看交互式 HTML 组件（含 ECharts/D3/p5.js/GeoGebra/Desmos 扩展组件） | — |
 | pymunk / edge-tts / genanki / trimesh（可选，v1.2.0 第二批次） | 物理引擎真实模拟 / 中文语音讲解 mp3 / Anki 记忆卡 / 3D 模型单文件 HTML | 对应能力自动跳过或降级（见降级链） |
 
-> 完整工具箱（含选型矩阵与降级链）见 `references/extended-viz.md`、`references/extended-viz-2.md`（第二批次，全部真机实测：Mermaid 文本即图、pymunk 物理模拟、edge-tts 配音、自测 HTML + Anki 记忆卡、model-viewer 3D 单文件交付）与 [TECHNICAL.md](TECHNICAL.md) §3.5–3.6。
+> 完整工具箱（含选型矩阵与降级链）见 `references/extended-viz.md`、`references/extended-viz-2.md`（第二批次，全部真机实测：Mermaid 文本即图、pymunk 物理模拟、edge-tts 配音、自测 HTML + Anki 记忆卡、model-viewer 3D 单文件交付）与 [TECHNICAL.md](TECHNICAL.md) §3.4–3.6。
 
 ### 安装验证（30 秒确认装好了）
 
