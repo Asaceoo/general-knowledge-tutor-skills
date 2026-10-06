@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电流 · 自测 5 题</title>
+<style>
+  :root { --ok:#16a34a; --bad:#dc2626; --ink:#1e293b; }
+  body { font-family:"Microsoft YaHei",sans-serif; max-width:640px; margin:24px auto; padding:0 16px; color:var(--ink); }
+  .q { border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; margin:14px 0; }
+  .q h3 { margin:0 0 10px; font-size:15px; }
+  label { display:block; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:14px; }
+  label:hover { background:#f1f5f9; }
+  .right { background:#dcfce7 !important; }
+  .wrong { background:#fee2e2 !important; }
+  #result { margin:18px 0; padding:14px; border-radius:10px; font-size:15px; display:none; }
+  .pass { background:#dcfce7; border:1px solid var(--ok); }
+  .fail { background:#fee2e2; border:1px solid var(--bad); }
+  .exp { margin-top:8px; font-size:13px; color:#475569; display:none; }
+  button { padding:8px 22px; border:none; border-radius:8px; background:#2563eb; color:#fff; font-size:14px; cursor:pointer; }
+</style>
+</head>
+<body>
+<h2>电流 · 5 题自测</h2>
+<div id="quiz"></div>
+<div id="result"></div>
+<button onclick="grade()">提交判分</button> <button onclick="location.reload()">重做</button>
+
+<script>
+const QUIZ = [
+  { q:"电流的本质是什么？", opts:["电子的随机热运动","电荷的定向移动","电场的旋转"], ans:1,
+    exp:"I = dQ/dt：电流等于单位时间通过横截面的电荷量，本质是电荷的定向移动。" },
+  { q:"1A、1mm² 铜导线里电子实际跑多快？", opts:["接近光速","约几米每秒","约 0.073 毫米/秒"], ans:2,
+    exp:"漂移速度 v=I/(neA)≈0.073mm/s，比蜗牛慢得多。" },
+  { q:"电子走得这么慢，为什么灯一开就亮？", opts:["电子跑得其实很快","电场瞬间推动整条导线里的电子","灯丝提前通了电"], ans:1,
+    exp:"导线里处处充满电子，闭合开关瞬间电场同时推动所有电子，不需要哪个电子从开关跑到灯。" },
+  { q:"电流方向与电子移动方向的关系是？", opts:["一致","相反","无固定关系"], ans:1,
+    exp:"电流方向按正电荷定向移动方向定义，金属中实际移动的是带负电的电子，故相反。" },
+  { q:"1 安培大约对应多少个电子通过截面每秒？", opts:["6.24×10¹⁸","6.24×10⁸","60 亿"], ans:0,
+    exp:"1C÷1.6×10⁻¹⁹C≈6.24×10¹⁸ 个/秒。" },
+];
+
+const quiz = document.getElementById("quiz");
+QUIZ.forEach((it, qi) => {
+  const div = document.createElement("div"); div.className = "q";
+  div.innerHTML = `<h3>${qi+1}. ${it.q}</h3>` +
+    it.opts.map((o, oi) => `<label data-q="${qi}" data-o="${oi}"><input type="radio" name="q${qi}" value="${oi}"> ${o}</label>`).join("") +
+    `<div class="exp" id="exp${qi}">✔ ${it.exp}</div>`;
+  quiz.appendChild(div);
+});
+
+function grade() {
+  let score = 0;
+  QUIZ.forEach((it, qi) => {
+    const picked = document.querySelector(`input[name=q${qi}]:checked`);
+    const labels = [...document.querySelectorAll(`label[data-q="${qi}"]`)];
+    labels.forEach(l => { const o = +l.dataset.o;
+      if (o === it.ans) l.classList.add("right");
+      else if (picked && +picked.value === o) l.classList.add("wrong"); });
+    document.getElementById(`exp${qi}`).style.display = "block";
+    if (picked && +picked.value === it.ans) score++;
+  });
+  const r = document.getElementById("result");
+  const pass = score >= 4;
+  r.className = pass ? "pass" : "fail";
+  r.style.display = "block";
+  r.textContent = pass ? `通过：${score}/5 —— 可以进入下一个概念了` : `未通过：${score}/5 —— 建议回看「生活里的比方」和「一张图看懂」再测一次`;
+  return score;
+}
+
+// headless 自检模式：#selftest 自动全对判分，把结果写入 DOM 供 dump-dom 断言
+if (location.hash === "#selftest") {
+  QUIZ.forEach((it, qi) => { document.querySelector(`input[name=q${qi}][value="${it.ans}"]`).checked = true; });
+  const s = grade();
+  const meta = document.createElement("div"); meta.id = "selftest-result";
+  meta.textContent = `SELFTEST score=${s}/5 pass=${s>=4}`;
+  document.body.appendChild(meta);
+}
+</script>
+</body>
+</html>
