@@ -149,9 +149,10 @@ pv.OFF_SCREEN = True
 
 grid = pv.ImageData(dimensions=(40, 40, 40))
 x, y, z = np.meshgrid(*[np.linspace(-2, 2, 40)]*3, indexing="ij")
-grid["v"] = np.sin(x*y*z/2)                    # 标量场
-vec = np.c_[np.sin(y), np.cos(x), np.zeros_like(x)]  # 向量场
-grid["vec"] = vec
+grid["v"] = np.sin(x*y*z/2).ravel(order="F")   # 标量场：ImageData 点序为 F-order，多维数组必须显式 ravel，否则新版 pyvista 报 "Number of scalars (40)" 不匹配
+vec = np.c_[np.sin(y).ravel(order="F"), np.cos(x).ravel(order="F"),
+            np.zeros_like(x).ravel(order="F")]  # (N,3) 向量场：np.c_ 前必须先 ravel，否则形状 (40,40,120) 报错
+grid["vec"] = vec   # (N,3) 形状的向量场可整体赋值
 
 p = pv.Plotter(off_screen=True, window_size=(900, 640))
 p.add_mesh(grid.slice(normal="z"), cmap="coolwarm")  # 中层切片
@@ -165,6 +166,7 @@ p.screenshot("field_slice.png")
 要点：
 - 产物是**自包含 HTML**（`canvas` + WebGL），浏览器打开即可拖拽视角——天然适合学习卡内嵌。
 - 动画由 `rate()` 控制帧率，`sphere/arrow/curve` 等对象即改即动。
+- 坑（2026-10-06 实测）：vpython 依赖 `pkg_resources`，而 **setuptools ≥81 已移除该模块**（Python 3.13 新环境默认装到 84.x 就会 `ModuleNotFoundError: No module named 'pkg_resources'`）→ 先 `pip install "setuptools<81"` 再装 vpython。
 
 模板（行星轨道 + 速度矢量）：
 
