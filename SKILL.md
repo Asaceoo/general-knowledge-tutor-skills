@@ -2,11 +2,11 @@
 name: general-knowledge-tutor
 description: >-
   通识类可视化学习导师：把任意学科的通识/概念（数学、物理、化学、生物、经济、历史、哲学、CS、心理等）用第一性原理拆到底层原子事实、体系化建图、通俗类比讲清本质，并优先用 Manim 动画 / 分镜、Python 脚本（matplotlib/plotly）、SVG 与交互式 HTML 组件做可视化，输出「快速入门 + 体系化 + 本质理解 + 可视化」一体的学习包。
-  当用户说「搞懂 / 理解 / 讲讲 / 为什么是这样 / 原理是什么 / 本质 / 第一性原理 / 可视化讲解 / 做个动画 / 系统学 / 入门一门学科 / 科普 / 教学 / 面试讲解」某个概念或主题时，务必优先使用本技能，即使用户没有显式说出「技能」或「Manim」。
+  当用户说「搞懂 / 理解 / 讲讲 / 为什么是这样 / 原理是什么 / 本质 / 第一性原理 / 可视化讲解 / 做个动画 / 系统学 / 入门一门学科 / 科普 / 教学 / 面试讲解 / 通俗版 / 讲给外行听 / 出几道题测测我 / 记忆卡」某个概念或主题时，务必优先使用本技能，即使用户没有显式说出「技能」或「Manim」。
 compatibility: >-
   平台无关：可在任何具备「读文件 + 执行命令 + 写文件」能力的 AI 智能体中运行
   （Claude Code / OpenClaw / WorkBuddy / Cursor / WPS AI / Codex 等）。
-  运行时：Python 3.10+（Manim 渲染需 3.10–3.12；matplotlib/plotly 任意 3.x）；Node 可选（交互式 HTML 组件开发）。
+  运行时：Python 3.10+（Manim 3.10–3.13 均可，Manim Community 0.21.0 已实测于 Python 3.13.14；matplotlib/plotly 任意 3.x）；Node 可选（交互式 HTML 组件开发）。
   可选依赖：manim（pip install manim，渲染前用 `python -c "import manim"` 探测，缺失则降级为静态 SVG/matplotlib 并用文内说明）。
   事实核验：优先使用本地权威资料；若运行环境提供联网搜索/网页抓取工具则用于交叉验证并标注来源，无网络时标注「待核验」。
 ---
