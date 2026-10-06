@@ -70,3 +70,39 @@ python _audit_v121/audit_r4_xss.py              # 实现者视角：quiz XSS 双
 ```
 
 > 注：audit_r4_scan.py 的 B1「README 引用 MISS」为扫描器自身正则吃进反引号的假阳性（文件实际存在），已复核排除；「3D 五层」措辞差异（README「3D 分五层」）同为关键词匹配假阳性，能力链在 TECHNICAL §3.3 完整。
+
+---
+
+## 第四批（v1.4.0 基线，2026-10-06）
+
+| # | 视角 | 问题 | 真机证据 | 修法 | 状态 |
+|---|---|---|---|---|---|
+| R5-1 | 实现者 | **`--bump patch` 静默不递增**：`bump()` 的 patch 分支写成 `f"{a}.{b}.{c}"`（c 未 +1），exit=0 且照常打包 → 打出与旧版同名的 zip 覆盖原产物，用户以为发布了新版本 | 隔离副本真机：`VERSION 1.4.0 --bump patch → VERSION=1.4.0`，exit=0，产物名 `...-v1.4.0.zip` | patch 分支改 `c+1`；并加防御断言「递增后必须 != 旧值，否则 fail（禁止静默复用旧版本号）」 | ✅ |
+| R5-2 | 实现者 | `--note` / `--bump` 置于末位缺值 → 裸 `IndexError: list index out of range`（v2 新增参数未做边界校验，是 R4-5 的同类遗漏） | 真机：`['--bump','patch','--note']` 与 `['--bump']` 均抛 IndexError + Traceback | 新增 `opt_val(flag)`：缺值 / 末位 / 后接另一个 flag 一律 `[FAIL] xx 后缺少取值（正确用法：--xx <值>）` | ✅ |
+| R5-3 | 实现者 | README 无版本锚点时的「自动插入」分支从未被真机验证（首轮因 R5-1 连带失败被误判） | 真机 T9：删除锚点行后跑 `--bump patch`，插入结果 False | 修 R5-1 后复测：锚点自动插入 True，9/9 用例全 PASS | ✅ |
+| R5-4 | 审查者 | TECHNICAL §1 目录树严重滞后：缺 `extended-viz-2.md`、`audit-checklist.md`、`templates/`、`scripts/`、`VERSION`；且正文仍写「**纯声明式技能——不包含任何可执行脚本**」，与已存在的 `scripts/package.py`、`scripts/regression.py` 自相矛盾 | 静态扫描 A3 系列：磁盘 6 个 references + 1 模板 + 2 脚本，目录树仅列 4 个 | 目录树补全（含 `templates/`、`scripts/`、`VERSION`）；定位描述改为「声明式技能 + 两个工程脚本（仅服务打包/回归，不参与运行时交付）」 | ✅ |
+| R5-5 | 审查者 | TECHNICAL §5.2 称「内置 6 条反模式」，SKILL.md 实测 **8 条**（与历史上 7→9 计数漂移同源） | 扫描 A1：`TECHNICAL=6 vs SKILL.md 实测=8` | 改为 8 条并列举；回归新增 `doc-黑名单计数` 断言永久防复发 | ✅ |
+| R5-6 | 审查者 | TECHNICAL Phase 4 选型矩阵 **10 行** vs SKILL.md **13 行**（缺 Mermaid / pymunk / 配音+自测+3D 单文件三行） | 扫描 A2：`SKILL.md=13 vs TECHNICAL=10` | TECHNICAL 补 3 行；回归新增 `doc-选型矩阵行数` 断言 | ✅ |
+| R5-7 | 审查者 | TECHNICAL §5.4 质量评分记录只写到第二轮（88.45），缺第三轮（94.1 + ROI 网关跳过结论） | 扫描 A5：§5.4 仅两轮表格 | 补「第三轮」小节（含 10 维明细与真机证据来源） | ✅ |
+| R5-8 | AI 使用方 | **Phase 0 指令撞墙**：要求「一次性弹出五项让用户点选」，但主流结构化提问组件一次最多 4 个问题 → 模型照做会失败并退化成开放式追问（与「禁止开放式追问」自相矛盾） | 扫描 B3：需弹选项维度 ≥4（上限 4），且无任何分批/合并兜底说明 | SKILL.md 新增「提问能力约束」5 条：主题不单列、深度+覆盖范围可合并为 1 问、超限则分批（首批答完即开工）、无提问能力时走默认值；TECHNICAL §2 同步 | ✅ |
+| R5-9 | AI 使用方 | 多选维度（可视化形式）未说明须声明为多选，且「可全不选」在提问组件中**无对应机制**（用户无法表达「不选」） | 扫描 B4b：仅缺省策略兜底，无选项级兜底 | 明确「须声明为多选」+ 必须提供「自动（交给技能决定）」显式选项 | ✅ |
+| R5-10 | AI 使用方 | SKILL.md「深度=精通/**交付**时交付双文档」——「交付」不是深度档位名（档位为 速览/精通/**输出**），属术语漂移 | 扫描 B6 命中 `深度=精通/交付时交付` | 改为「深度=精通/输出时」 | ✅ |
+| R5-11 | AI 使用方 | SKILL.md「配套资源」未列 `audit-checklist.md` 与 `templates/quiz-template.html`——AI 使用方做自测/记忆卡时不知道有现成模板，事后校验也无清单入口 | 扫描 B7：两项 MISS | 补两行引用（含 `#selftest` 断言用法与「改动后必跑回归」提示） | ✅ |
+| R5-12 | AI 使用方 | 第二批次产物（mp3 / 自测 HTML / apkg / 3D HTML）**无命名约定**——「电流」实例自行命名，换会话即不一致 | 对照 `D:\skills\electric-current\` 实际命名 vs SKILL.md 命名块无相关条款 | 命名块补「第二批次产物命名」：`[主题]—语音讲解.mp3` / `—自测N题.html` / `—记忆卡.apkg` / `—3D结构.html` | ✅ |
+| R5-13 | 实现者 | 回归未覆盖 v1.4.0 新功能（Phase 0 五项）与文档交叉一致性，属「常规验证未覆盖全部功能」 | 原回归仅 27 项，无 SKILL.md 结构断言 | regression.py 新增三组 18 项断言（Phase 0 结构 13 项 / 文档一致性 4 项 / package bump 真机 1 项）→ 43 PASS / 2 SKIP / 0 FAIL | ✅ |
+
+### 第四批新坑回灌
+
+- **静默失败比崩溃更危险**：`--bump patch` 未递增却 exit=0，会打出与旧版同名的压缩包覆盖产物。凡「版本号单一来源 + 自动递增」类脚本，必须加「递增后 != 旧值」断言（已写进 package.py 与回归用例）。
+- **隔离沙箱脚本要排除 `.git`**：`shutil.rmtree` 清理含 `.git` 的临时副本会触发本机安全策略（PermissionError WinError 5）。构造隔离副本时 `ignore=ignore_patterns(".git", "dist", "_reg_work", "__pycache__")`，并给每次运行加唯一 ID，删除用 `ignore_errors=True`。
+- **文档计数类漂移会反复发生**（7→9 坑、6→8 反模式、10→13 矩阵行）。根治方式不是人工核对，而是把「声称数 vs 实测数」写成回归断言（本批新增 `doc-黑名单计数`、`doc-选型矩阵行数`、`doc-目录树覆盖`、`doc-版本号四处一致`）。
+
+### 第四批回归/对抗命令
+
+```bash
+python scripts/regression.py              # 全量回归（修复后 43 PASS / 2 SKIP / 0 FAIL）
+python _audit_v121/audit_r5_scan.py        # 审查者 + AI使用方视角静态扫描（A1-A5 / B1-B7）
+python _audit_v121/audit_r5_pkg.py         # 实现者视角：package.py 9 个边界用例（隔离副本真机）
+```
+
+> 注：audit_r5_scan.py 首版 B3「需弹选项 7 项」为 section 截断正则过宽（把 Phase 1–5 的编号项一并计入）导致的计数偏差，结论方向不变（5 维度 > 4 上限），已按修复后的 SKILL.md 复核。
