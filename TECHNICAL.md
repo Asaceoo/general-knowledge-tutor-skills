@@ -14,13 +14,21 @@ general-knowledge-tutor/
 │   ├── manim-patterns.md          # Manim 分镜规范 + 4 个可复用 Scene 模板 + 渲染/降级
 │   ├── visualization-cookbook.md  # matplotlib/plotly/SVG/交互 HTML 速查模板
 │   ├── 3d-animation.md            # 3D 五层选型（mplot3d/PyVista/vpython/Three.js/Blender bpy/ThreeDScene/plotly）+ 坑清单
-│   └── extended-viz.md            # 扩展工具箱（ECharts/D3/p5.js/pyvis/schemdraw/Motion Canvas/GeoGebra/Desmos）+ 表达方式
+│   ├── extended-viz.md            # 扩展工具箱（ECharts/D3/p5.js/pyvis/schemdraw/Motion Canvas/GeoGebra/Desmos）+ 表达方式
+│   ├── extended-viz-2.md          # 扩展工具箱第二批次（Mermaid/pymunk/edge-tts/自测 HTML+genanki/trimesh→model-viewer），全部真机实测 + 9 条坑表
+│   ├── audit-checklist.md         # 三批对抗性审查台账（含回归命令），改动后必跑的兜底校验入口
+│   └── templates/
+│       └── quiz-template.html     # 交互自测 HTML 模板（内置 esc 转义防注入 + #selftest 自测模式）
+├── scripts/
+│   ├── package.py                 # 一键打包：VERSION 单一来源 + --bump 自动递增 + 三手册版本同步 + zip 自检
+│   └── regression.py              # 全量回归：references 代码块真机执行 + quiz headless 判分 + 双文档约束 + 结构与版本一致性
+├── VERSION                        # 版本号单一来源（package.py 读取并递增）
 ├── test-prompts.json              # 触发测试用例（should_trigger / should_not_trigger）
 ├── README.md                      # 用户手册
 └── TECHNICAL.md                   # 本文件
 ```
 
-设计定位：**纯声明式技能**——不包含任何可执行脚本，全部产出由智能体在运行时按模板生成。好处：跨平台零适配成本；代价：依赖宿主智能体具备「写文件 + 执行命令」能力（缺失时的降级策略见 §4）。
+设计定位：**声明式技能 + 两个工程脚本**——技能交付物（讲解卡/可视化/脚本）全部由智能体在运行时按模板生成，`scripts/` 下的两个脚本只服务于**技能自身的打包与回归**（不参与运行时交付）。好处：跨平台零适配成本；代价：依赖宿主智能体具备「写文件 + 执行命令」能力（缺失时的降级策略见 §4）。
 
 ### 1.1 触发机制
 
@@ -38,6 +46,7 @@ general-knowledge-tutor/
 确认方式：用提问能力弹结构化选项（单选/多选），禁止开放式追问；用户已给则跳过该项。
 组合规则：深度=速览时忽略可视化与覆盖范围（只出通俗版）；覆盖范围默认对齐深度（速览→单点，精通→带前置，输出→完整体系），显式指定则覆盖。
 未确认时的默认值：`(精通, 带前置, 有相关背景, 可视化自动)`，且必须在交付物开头标注假设。
+**提问上限约束**：多数运行时的结构化提问一次最多 4 个问题，因此①主题从 query 推断、不单列；②「深度 + 覆盖范围」可合并为 1 问（如 `速览·单点`）；③仍超限则分两批（首批答完即可开工 Phase 1）；④多选维度必须提供「自动（交给技能决定）」显式选项（提问组件无「不选」机制）；⑤无提问能力时不追问，直接走默认值并标注。
 **门控 🔴 CHECKPOINT**：五项确认（或超时走默认）才可进入 Phase 1。
 
 ### Phase 1 第一性原理拆解
@@ -64,6 +73,9 @@ general-knowledge-tutor/
 | 物理/轨道/仿真教学 | vpython | p5.js 动画 / 分步静态图 |
 | 函数/几何交互探索 | GeoGebra / Desmos iframe | 滑块 HTML widget |
 | 网络/关系/流向 | pyvis / graphviz；桑基等用 ECharts | Mermaid 手写 |
+| 结构/流程/状态机/体系 DAG | Mermaid 文本即图（Markdown 原生渲染） | graphviz 出 PNG |
+| 力学/碰撞/真实物理过程 | pymunk 物理引擎真实模拟 | matplotlib 手绘帧动画 |
+| 讲解可听化 / 3D 可交互 / 自测闭环 | edge-tts 配音 mp3 + model-viewer 单文件 3D + 自测 HTML/genanki | 纯文字通俗版 / mp4 动画 |
 
 **3D 启用门槛**：仅当空间结构本身承载信息（旋转→振荡、螺旋、场、曲面、轨道）时启用；2D 能讲清的不上 3D。
 
@@ -165,7 +177,7 @@ SKILL.md 通过「能力占位符 + 映射表」实现平台无关。四个占�
 
 ### 5.2 反例黑名单
 
-SKILL.md 内置 6 条反模式→替代做法对照（编造数据、伪产物、循环定义、孤立讲解、炫技 3D、类比当定义），要求智能体每轮交付前对照。
+SKILL.md 内置 **8 条**反模式→替代做法对照（编造数据 / 交付未真实运行的伪产物 / 循环定义 / 单点孤立讲解 / 为炫技上 3D / 把类比当定义 / 环境无依赖仍硬上高阶工具干等 / 把速览需求撑成完整五阶段流程），要求智能体每轮交付前对照。
 
 ### 5.3 门控机制
 
@@ -191,6 +203,22 @@ SKILL.md 内置 6 条反模式→替代做法对照（编造数据、伪产物�
 | R2 | 黑名单 7.5→8.5 | 新增 2 条反模式（硬上高阶工具干等 / 速览被撑成全流程） | +0.6 |
 | R3 | 语义 8→8.5 | 设计原则与质量约束去重（回归「为什么」定位）；dim3 簇观察 +0.5 | +0.9 |
 
+**第三轮（2026-10-06，v1.2.2）：基线 88.45 → 94.1（ROI 网关触发，跳过优化循环）**
+
+本轮首次以**真机证据**（而非 dry_run 推演）计 dim8：独立评审员复跑 `scripts/regression.py` 得 25 PASS / 2 SKIP / 0 FAIL（1m49s）、抽查审计台账 7/7 吻合、端到端产物 12/12（mp3 MPEG 帧 / glb glTF 魔数 / apkg zip 三处魔数核验）。
+
+| 维度 | 得分 | 关键依据 |
+|---|---|---|
+| dim1/4/7a/10 | 10 | 确定性扫描：frontmatter 规范、STOP=1、标题无跳跃、Quick 门控 |
+| dim2 / dim3 | 9 | 五 Phase 输入产出齐备、降级链与超时判定完整 |
+| dim5 | 9.18 | 软化词 0 处；硬参数密集（zh-CN-XiaoxiaoNeural、≤40%、model-viewer@4.1.0） |
+| dim6 | 10 | 引用计数修正后满分 |
+| dim7b | 8.67 | 无 AI 腔；跨文件重申小扣 |
+| dim8 | 9.65 | 8a=10 / 8b=9 / 8c=10，真机证据计分 |
+| dim9 | 9 | 8 条反模式具体且配替代做法 |
+
+本轮唯一实质改动：修正 SKILL.md 坑表计数（7 条→9 条）；另修复 WorkBuddy 部署副本 references 不同步（补齐 extended-viz-2.md / audit-checklist.md / templates）。**ROI 判定：94.1 ≥ 85 且最低维 8.67 ≥ 7 → 按规则跳过优化循环。**
+
 ## 6. 二次开发指南
 
 1. **改触发词**：编辑 frontmatter `description`，跑 `test-prompts.json` 的用例验证命中/误触发。
@@ -201,6 +229,7 @@ SKILL.md 内置 6 条反模式→替代做法对照（编造数据、伪产物�
 
 ## 7. 版本
 
+- v1.5.0（2026-10-07）：第四批对抗性审查（R5-1~R5-13）：修复 package.py --bump patch 静默不递增（会打同名 zip 覆盖旧产物）与 --note/--bump 缺值 IndexError；TECHNICAL 目录树、反模式计数（6→8）、选型矩阵（10→13 行）、第三轮评分记录四处文档漂移更正；Phase 0 新增提问能力约束（一次≤4 问，可合并或分批，多选须带自动兜底项）与第二批次产物中文命名约定；regression.py 新增 18 项断言，全量 43 PASS / 2 SKIP / 0 FAIL
 - v1.4.0（2026-10-06）：Phase 0 升级结构化选项确认：新增主题覆盖范围（单点/带前置/完整体系）与可视化形式多选（动画/交互图/3D/配音/记忆卡）两个维度，改为禁止开放式追问、缺省策略兜底、组合规则防维度冲突；README 指令速查表补说法、test-prompts 补 typical-7
 - v1.3.0（2026-10-06）：第三批对抗性审查（R4-1~R4-8）：quiz 模板 esc 转义防注入（双 Case 真机对照）；package.py 边界校验 + 手册版本号自动递增（README/TECHNICAL/test-prompts 三处联动）；TECHNICAL §3.5/3.6 顺序修正 + 坑表补全 9 条；README 过度承诺措辞修正；SKILL.md 主题名净化规则
 - v1.2.2（2026-10-06）：鲁班第三轮评审（基线 94.1，ROI 网关触发跳过优化循环）——修正 SKILL.md L195 坑表计数（7 条→9 条：pymunk 4 + genanki 1 + glb 4，dim6 恢复满分）；WorkBuddy 部署副本 references 同步（补齐 extended-viz-2.md / audit-checklist.md / templates，消除 5 处引用不可达与旧版无 ravel 修复问题）。回归 25 PASS / 2 SKIP / 0 FAIL（独立子 agent 复跑复核）。
