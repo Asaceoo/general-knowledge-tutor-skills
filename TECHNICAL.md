@@ -111,7 +111,7 @@ general-knowledge-tutor/
 | F | Manim `ThreeDScene` | manim | .mp4 | 已装 Manim 时的 3D |
 | G | plotly 3D | plotly | 自包含 .html | 数据曲面/散点探索 |
 
-### 3.5 扩展工具箱（references/extended-viz.md）
+### 3.4 扩展工具箱（references/extended-viz.md）
 
 按「填补空白」准入，模板含最小可运行示例 + 降级链：
 
@@ -135,7 +135,7 @@ general-knowledge-tutor/
 
 第二批次实测坑（7 条，详见 extended-viz-2.md 各节坑表）：PillowWriter 不支持 with 上下文、Unicode 下标 U+2080 缺字形（改 mathtext）、trimesh 5.x 无 torus_knot、glb 导出+设色需 scipy、model-viewer file:// CORS 拦 glb（必须 base64 内嵌或 http 服务）、headless WebGL 需 --enable-unsafe-swiftshader、Chrome 截图对工作区目录写文件被拒（指向 %TEMP%）。
 
-### 3.4 交互组件交付策略
+### 3.5 交互组件交付策略
 
 1. 宿主有内联 HTML 能力（如 WorkBuddy widget）→ 原始 HTML 片段交付；
 2. 否则 → 独立 `.html` 文件落盘 + 回复中给路径。
@@ -198,6 +198,7 @@ SKILL.md 内置 6 条反模式→替代做法对照（编造数据、伪产物�
 
 ## 7. 版本
 
+- v1.2.1（2026-10-06）：三视角对抗性审查修复（台账见 references/audit-checklist.md，13 项）——pymunk 模板静默不模拟 bug（space.add 补 body + 测周期守卫）、PyVista 多维标量 ravel、vpython/setuptools≥81 坑、graphviz dot.exe 坑、quiz 模板入库 references/templates/、Manim 版本断言实测校正（0.21.0@3.13.14）、触发词/测试用例扩充（12 条）、章节序修正；回归脚本 scripts/regression.py（25 PASS/2 SKIP/0 FAIL）；新增 VERSION 单一来源 + scripts/package.py 自动递增打包。
 - v1.2.0（2026-10-06）：扩展工具箱第二批次——新增 references/extended-viz-2.md（Mermaid / pymunk / edge-tts / 交互自测 HTML + genanki / trimesh→model-viewer 3D 单文件交付），**五类模板全部真机实测**（pymunk 单摆出 GIF+周期数据、edge-tts 出 mp3、genanki 出 apkg、自测 HTML headless 判分 5/5、model-viewer 截图渲染验证），7 条实测坑回填；Phase 4 选型矩阵扩至 13 行。
 - v1.1.4（2026-10-06）：双文档文件命名强制中文——主卡 `[主题]—通识可视化学习卡.md`、通俗版 `[主题]—通俗版.md`（禁止拼音/英文文件名）；可视化产物与 md 同目录、相对路径引用。经「电流」实测交付验证（`电流—通识可视化学习卡.md` / `电流—通俗版.md`）。
 - v1.1.3（2026-10-06）：Phase 5 升级双文档交付——主卡 + 通俗版（固定骨架 + 三条防漂移硬规则：共用事实/术语翻译/篇幅≤40%）；速览档仅交付通俗版。
