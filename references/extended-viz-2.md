@@ -69,7 +69,8 @@ def simulate(theta0_deg):
     space = pymunk.Space(); space.gravity = (0.0, -G)
     body = pymunk.Body(1.0, 1.0 * L * L / 3)
     body.position = (L*math.sin(math.radians(theta0_deg)), -L*math.cos(math.radians(theta0_deg)))
-    space.add(pymunk.PinJoint(space.static_body, body, (0, 0), (0, 0)))
+    joint = pymunk.PinJoint(space.static_body, body, (0, 0), (0, 0))
+    space.add(body, joint)   # 必须 body+joint 都 add；只 add joint 时 body 不被模拟（静默！）
     ts, ths = [], []
     for i in range(int(SIM_T/DT)):
         space.step(DT)
@@ -79,6 +80,8 @@ def simulate(theta0_deg):
 
 def measure_period(ts, ths):  # 过零上升沿测周期
     zeros = [ts[i] for i in range(1, len(ts)) if ths[i-1] < 0 <= ths[i]]
+    if len(zeros) < 2:      # 防守卫：模拟未发生时宁可报错，不静默返回 -0.0
+        raise RuntimeError(f"过零点不足({len(zeros)})：检查 body 是否 add 进 space、仿真时长是否够")
     return sum(b-a for a, b in zip(zeros, zeros[1:])) / (len(zeros)-1)
 
 t5, th5 = simulate(5); t60, th60 = simulate(60)
@@ -93,6 +96,7 @@ print(f"θ0=60° T={measure_period(t60, th60):.4f}s") # 2.1550s（+7.37%）
 
 **坑表（实测）**：
 1. `PillowWriter` **不支持 with 上下文**（`TypeError: does not support the context manager protocol`）→ 用 `writer = PillowWriter(fps=25)` + `with writer.saving(fig, "x.gif", dpi=90):` 循环 `grab_frame()`。
+0. **pymunk 只 add joint 不 add body = 模拟静默不发生**（无任何报错，θ 恒为初值，measure_period 无守卫时返回 `0/-1 = -0.0`，肉眼极难察觉）→ 必须 `space.add(body, joint)`；测周期函数加 `len(zeros)<2 抛错` 守卫。2026-10-06 对抗性审查实测抓到。
 2. Unicode 下标 `₀`(U+2080) 在微软雅黑**缺字形**（Glyph missing 警告，渲染成方框）→ 用 mathtext `$\theta_0$`，别用 Unicode 下标字符。
 3. 转动惯量随便给会数值发散/摆速异常；质点摆给 `m*L²/3` 量级稳定。
 
@@ -123,16 +127,18 @@ asyncio.run(main())
 
 **实测结果**：203KB mp3（约 40s），中文自然度良好。语音端点 speech.platform.bing.com 在受限网络下可达。
 
-**manim-voiceover**（与 Manim 3.x/Community 配合，未实测标注⚠️）：
+**manim-voiceover**（⚠️ 实测受限，2026-10-06 取证：包本体官方 PyPI 可装（清华镜像无源），但 gtts 后端需 `pip install "manim-voiceover[gtts]"`，且**缺包时渲染进程会交互式询问安装导致 headless 挂死**；gtts 合成依赖 translate.google.com——受限网络下不可用（`--dry_run` 也过不了，真实报错 `gTTS gave an error`）。受限环境绕行：**edge-tts 出独立 mp3 + Manim 正常渲染**（本节上方路径），或将 mp4 与 mp3 交给前端 `<audio>` 同步。
 
 ```python
 from manim import *
 from manim_voiceover import VoiceoverScene
+from manim_voiceover.services.gtts import GTTSService  # 联网可用环境才装得动
 
 class MyScene(VoiceoverScene):
     def construct(self):
+        self.set_speech_service(GTTSService())
         with self.voiceover(text="这句话念完之前，动画不会走完") as tracker:
-            self.play(Create(circle), run_time=tracker.duration)
+            self.play(Create(Circle()), run_time=tracker.duration)
 ```
 
 **边界**：edge-tts 依赖微软在线接口（离线不可用）；交付时 mp3 与学习卡同目录、主卡里相对路径引用。离线场景降级为纯文字通俗版（v1.1.3 双文档已覆盖）。
@@ -145,7 +151,7 @@ class MyScene(VoiceoverScene):
 
 **为什么**：自检问题躺在 md 里只是「看过」，变成可交互判分/记忆卡才是「测过」——学习闭环从「读」推进到「测+复习」。
 
-**交互自测模板要点**（完整模板经 Chrome headless 实测判分 5/5，见本仓库 release 附件或示例目录）：
+**交互自测模板要点**（完整可运行模板：本仓库 [`references/templates/quiz-template.html`](templates/quiz-template.html)，经 Chrome headless 实测判分 5/5）：
 - 单文件、零依赖：`QUIZ` 数组内嵌题目（题干/选项/答案索引/解析），`grade()` 判分并对正确项加 `.right`、错选项加 `.wrong` 样式，解析随判分展开；
 - **判分后不弹 alert**，结果写进 `#result` div（含「通过/回看建议」文案）；
 - 附带 `#selftest` 自动答题模式：把判分结果写进 DOM（`SELFTEST score=5/5 pass=true`），供 `chrome --headless=new --dump-dom` 机器断言——**交付前真机自检的固定手段**。
@@ -161,6 +167,7 @@ model = genanki.Model(
     templates=[{"name": "Card 1", "qfmt": "{{Question}}",
                 "afmt": '{{FrontSide}}<hr id="answer">{{Answer}}'}])
 deck = genanki.Deck(2059400110, "通识学习::电流")  # ID 固定可增量更新
+CARDS = [("电流的本质是什么？", "电荷的定向移动，I = dQ/dt。")]  # ← 占位示例：换成本主题自检问题 (问题, 要点) 列表
 for q, a in CARDS:
     deck.add_note(genanki.Note(model=model, fields=[q, a]))
 genanki.Package(deck).write_to_file("electric-current.apkg")
