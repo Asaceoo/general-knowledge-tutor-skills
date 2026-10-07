@@ -18,6 +18,9 @@
   .fail { background:#fee2e2; border:1px solid var(--bad); }
   .exp { margin-top:8px; font-size:13px; color:#475569; display:none; }
   button { padding:8px 22px; border:none; border-radius:8px; background:#2563eb; color:#fff; font-size:14px; cursor:pointer; }
+  :focus-visible { outline:3px solid #2563eb; outline-offset:2px; }   /* 键盘可达性 */
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+  @media (max-width:480px) { body { margin:12px auto; padding:0 12px; } h2 { font-size:20px; } }
 </style>
 </head>
 <body>

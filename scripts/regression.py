@@ -4,7 +4,7 @@
 覆盖：①references 全部 python 代码块真机执行（SKIP 名单显式豁免）
      ②quiz 模板 headless 判分断言  ③双文档命名/篇幅/元词汇 ④版本一致性
 """
-import ast, json, os, re, shutil, subprocess, sys, tempfile
+import ast, glob, json, os, re, shutil, subprocess, sys, tempfile
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 REF = os.path.join(BASE, "references")
@@ -14,12 +14,51 @@ CHROME = r"C:/Program Files/Google/Chrome/Application/chrome.exe"
 WORK = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_reg_work")
 os.makedirs(WORK, exist_ok=True)
 
+
+def find_blender():
+    """Blender 应用探测（v1.5.3）：PATH → 常见目录 → 注册表安装位置。
+    blender.exe 通常不在 PATH，只看 Get-Command 会误判「本机没装」。"""
+    cands = [shutil.which("blender"), os.environ.get("BLENDER")]
+    cands += glob.glob(r"C:/Program Files/Blender Foundation/*/blender.exe")
+    cands += glob.glob(r"C:/Program Files/Blender*/blender.exe")
+    cands += glob.glob(os.path.expanduser(r"~/AppData/Local/Programs/Blender*/blender.exe"))
+    for c in cands:
+        if c and os.path.isfile(c):
+            return c
+    try:
+        import winreg
+        for hive in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
+            path = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"
+            with winreg.OpenKey(hive, path) as k:
+                for i in range(winreg.QueryInfoKey(k)[0]):
+                    try:
+                        with winreg.OpenKey(k, winreg.EnumKey(k, i)) as sk:
+                            name = winreg.QueryValueEx(sk, "DisplayName")[0]
+                            loc = winreg.QueryValueEx(sk, "InstallLocation")[0]
+                        if "Blender" in str(name) and loc:
+                            exe = os.path.join(str(loc).strip(), "blender.exe")
+                            if os.path.isfile(exe):
+                                return exe
+                    except Exception:
+                        continue
+    except Exception:
+        pass
+    return None
+
+
+BLENDER = find_blender()
+
 # 显式豁免名单：(文件, 块号, 原因)
 SKIP = {
     ("extended-viz", 2): "graphviz 需 dot.exe 系统二进制（坑已记入模板，无则降级 pyvis/Mermaid）",
-    ("3d-animation", 5): "bpy 依赖 Blender wheel(330MB)，环境未装",
 }
+# 注：bpy 代码块不再 SKIP —— 识别到 blender.exe 时用 `blender -b --factory-startup -P` 真机执行
 results = []  # (项, 状态, 说明)
+
+try:  # Windows GBK 控制台打印中文说明时会抛 UnicodeEncodeError，直接改用 UTF-8
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:
+    pass
 
 
 def run_blocks():
@@ -37,13 +76,24 @@ def run_blocks():
                 ast.parse(code)
             except SyntaxError as e:
                 results.append((label, "FAIL", f"SyntaxError L{e.lineno}")); continue
-            py = PY_MANIM if re.search(r"\b(from manim|import manim)\b", code) else PY_DEFAULT
             src = os.path.join(WORK, f"{key[0]}_b{i}.py")
             open(src, "w", encoding="utf-8").write(code)
-            p = subprocess.run([py, src], capture_output=True, timeout=180, cwd=WORK,
+            if re.search(r"\b(from bpy|import bpy)\b", code):
+                # bpy 是 Blender 自带模块：必须用 Blender 解释器跑，普通 venv 里没有它
+                if not BLENDER:
+                    results.append((label, "SKIP", "本机无 blender.exe（bpy 属 Blender 自带模块，pip 里没有是正常的）")); continue
+                cmd = [BLENDER, "-b", "--factory-startup", "-P", src]
+            elif re.search(r"\b(from manim|import manim)\b", code):
+                cmd = [PY_MANIM, src]
+            else:
+                cmd = [PY_DEFAULT, src]
+            p = subprocess.run(cmd, capture_output=True, timeout=180, cwd=WORK,
                                text=True, encoding="utf-8", errors="replace")
             if p.returncode == 0:
-                results.append((label, "PASS", (p.stdout.strip().splitlines() or [""])[-1][:80]))
+                # 过滤 Blender/渲染器的样板输出，尽量把模板自己的结论行当说明
+                cands = [l for l in (p.stdout or "").strip().splitlines()
+                         if l.strip() and not l.startswith(("Blender", "Saved:", "Fra:", "Info:"))]
+                results.append((label, "PASS", (cands[-1] if cands else "")[:80]))
             else:
                 results.append((label, "FAIL", (p.stderr.strip().splitlines() or [""])[-1][:140]))
 
@@ -217,8 +267,123 @@ def run_package_bump():
     shutil.rmtree(tmp, ignore_errors=True)
 
 
+def run_visual_chain():
+    """v1.5.1 可视化链路加固断言：跨解释器探测 / LaTeX / MP4 降级档 / 配音合体 / PyVista 质量档 / 离线自足"""
+    def rd(name):
+        return open(os.path.join(REF, name), encoding="utf-8").read()
+    mp = rd("manim-patterns.md")
+    ck = rd("visualization-cookbook.md")
+    d3 = rd("3d-animation.md")
+    ev2 = rd("extended-viz-2.md")
+    tech = open(os.path.join(BASE, "TECHNICAL.md"), encoding="utf-8").read()
+    sk = open(os.path.join(BASE, "SKILL.md"), encoding="utf-8").read()
+    tpl_dir = os.path.join(REF, "templates")
+    tpl = open(os.path.join(tpl_dir, "selftest-web-template.html"), encoding="utf-8").read()
+    mvt_path = os.path.join(tpl_dir, "model-viewer-template.html")
+    mvt = open(mvt_path, encoding="utf-8").read() if os.path.isfile(mvt_path) else ""
+    quiz = open(os.path.join(tpl_dir, "quiz-template.html"), encoding="utf-8").read()
+    checks = [
+        ("viz-跨解释器探测", "跨解释器" in mp and "py -0p" in mp and "环境画像" in mp),
+        ("viz-LaTeX修复", "dvisvgm" in mp and "MathTex" in mp and "MiKTeX" in mp),
+        ("viz-MP4降级档", "libx264" in ck and "trunc(iw/2)*2" in ck),
+        ("viz-配音合体", "write-subtitles" in ev2 and "mov_text" in ev2 and "-c:v copy" in ev2),
+        ("viz-3D质量档", "enable_depth_peeling" in d3 and "ssaa" in d3),
+        ("viz-离线自足", "内联" in ev2 and "589 KB" in ev2),
+        ("tech-坑表同步", all(k in tech for k in
+                            ["libx264", "SoX", "kaleido", "enable_depth_peeling", "latex"])),
+        ("viz-SELFTEST约定", "SELFTEST" in ev2 and "__SELFTEST__" in tpl and "__SELFTEST__" in ck),
+        ("viz-无障碍", all("prefers-reduced-motion" in t and "focus-visible" in t
+                          for t in (tpl, quiz)) and "prefers-reduced-motion" in sk),
+        ("viz-2D备选图", "2D 备选图" in sk and "2D 备选图" in tech),
+        ("viz-Blender层", "BLENDER_EEVEE" in d3 and "--factory-startup" in d3
+                          and "enum_items" in d3 and "CYCLES" in d3),
+        ("viz-Blender适用清单", "适用" in d3 and "不适用" in d3 and "Mantaflow" in d3
+                               and "Cycles 光线追踪" in d3),
+        ("viz-glb交付", "export_scene.gltf" in d3 and "to_track_quat" in tech
+                        and "__GLB_SRC__" in mvt and "toDataURL" in mvt
+                        and "type=\"module\"" in mvt),
+        ("viz-拖对象交互", "drag-interactive-template" in ck and "拖对象" in ck
+                          and "拖参数" in ck and "拖视角" in ck),
+        ("viz-约束拖拽", "constraint-drag-template" in ck and "约束拖" in ck and "边长" in ck
+                        and "constraint-drag-template" in tech),
+        ("viz-3D优先档", "3D 优先档" in sk and "3D 优先档" in tech
+                        and "转一下才能看见" in sk and "默认产出 3D" in tech),
+        # v1.5.7 新增：Blender 调用决策清单必须同时存在于两份文档，且四道闸齐全
+        # （防「改了 SKILL 忘了 TECHNICAL」或「清单被静默删除」——与 R5-13 同类缺口）
+        ("viz-Blender决策清单", "调用决策清单" in sk and "调用决策清单" in tech
+                          and all(g in sk for g in ["空间维度", "反向门控", "依赖探测", "质感门槛"])
+                          and all(g in tech for g in ["空间维度闸", "反向门控", "依赖探测", "质感门槛"])
+                          and "glb 可拖拽 > " in sk and "glb + model-viewer" in sk
+                          and "blender.exe" in sk and "注册表" in sk),
+    ]
+    for label, ok in checks:
+        results.append((label, "PASS" if ok else "FAIL", "v1.5.1 可视化链路断言"))
+
+
+def run_web_selftest():
+    """v1.5.2 交互产物自测：模板 headless 断言 + 断言器脚本真机跑通"""
+    tpl = os.path.join(REF, "templates", "selftest-web-template.html")
+    if not os.path.isfile(tpl):
+        results.append(("selftest-web模板", "FAIL", "缺 references/templates/selftest-web-template.html")); return
+    try:
+        p = subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
+                            "--enable-unsafe-swiftshader", "--virtual-time-budget=6000", "--dump-dom",
+                            f"file:///{tpl.replace(chr(92), '/')}#selftest"],
+                           capture_output=True, timeout=90, text=True, encoding="utf-8", errors="replace")
+        m = re.search(r'"pass":\s*(true|false)', p.stdout)
+        if m and m.group(1) == "true":
+            results.append(("selftest-web模板", "PASS", "headless 断言 5 项全通过（含 WebGL readPixels）"))
+        else:
+            results.append(("selftest-web模板", "FAIL", (p.stdout or "")[-160:]))
+    except Exception as e:
+        results.append(("selftest-web模板", "FAIL", f"{type(e).__name__}: {e}"))
+    # 交互模板真机断言：拖对象（自由拖 / 约束拖）
+    for tname, tlabel in (("drag-interactive-template.html", "drag-interactive模板"),
+                          ("constraint-drag-template.html", "constraint-drag模板")):
+        tpath = os.path.join(REF, "templates", tname)
+        if not os.path.isfile(tpath):
+            results.append((tlabel, "FAIL", f"缺 references/templates/{tname}")); continue
+        try:
+            p3 = subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--no-sandbox",
+                                "--enable-unsafe-swiftshader", "--virtual-time-budget=6000", "--dump-dom",
+                                f"file:///{tpath.replace(chr(92), '/')}#selftest"],
+                               capture_output=True, timeout=90, text=True, encoding="utf-8", errors="replace")
+            m3 = re.search(r'"pass":\s*(true|false)', p3.stdout)
+            if m3 and m3.group(1) == "true":
+                results.append((tlabel, "PASS", "headless 断言全通过（画布/交互/守恒/键盘）"))
+            else:
+                results.append((tlabel, "FAIL", (p3.stdout or "")[-160:]))
+        except Exception as e:
+            results.append((tlabel, "FAIL", f"{type(e).__name__}: {e}"))
+    script = os.path.join(BASE, "scripts", "selftest_web.py")
+    try:
+        env2 = dict(os.environ, PYTHONIOENCODING="utf-8")   # 否则子进程按 GBK 输出，中文说明会花屏
+        p2 = subprocess.run([PY_DEFAULT, script], capture_output=True, timeout=180,
+                            text=True, encoding="utf-8", errors="replace", env=env2)
+        ok = p2.returncode == 0 and "[PASS]" in (p2.stdout or "")
+        results.append(("selftest-web脚本", "PASS" if ok else "FAIL",
+                        (p2.stdout or p2.stderr or "").strip().replace(chr(10), " / ")[:110]))
+    except Exception as e:
+        results.append(("selftest-web脚本", "FAIL", f"{type(e).__name__}: {e}"))
+
+
+def run_blender():
+    """v1.5.3 E 层：本机 Blender 应用探测（bpy 代码块的真机执行发生在 run_blocks 内）"""
+    if not BLENDER:
+        results.append(("blender-应用探测", "SKIP", "本机未安装 Blender 应用（E 层按降级链跳过）")); return
+    try:
+        v = subprocess.run([BLENDER, "--version"], capture_output=True, timeout=60,
+                           text=True, encoding="utf-8", errors="replace")
+        first = ((v.stdout or "").strip().splitlines() or ["?"])[0]
+        results.append(("blender-应用探测", "PASS" if "Blender" in first else "FAIL",
+                        f"{first[:40]} | {BLENDER}"))
+    except Exception as e:
+        results.append(("blender-应用探测", "FAIL", f"{type(e).__name__}: {e}"))
+
+
 run_blocks(); run_quiz(); run_dualdoc(); run_skill_struct()
-run_doc_consistency(); run_package_bump(); run_version()
+run_doc_consistency(); run_package_bump(); run_version(); run_visual_chain(); run_web_selftest()
+run_blender()
 
 print(f"{'回归项':<26}{'状态':<6}说明")
 for label, st, note in results:

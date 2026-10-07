@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__TITLE__</title>
+<style>
+  :root { --bg:#0f1117; --ink:#e5e7eb; --dim:#94a3b8; --cos:#60a5fa; --sin:#fb923c; }
+  body { font-family:"Microsoft YaHei",system-ui,sans-serif; margin:0; background:var(--bg); color:var(--ink); }
+  #wrap { max-width:760px; margin:0 auto; padding:16px; }
+  h1 { font-size:17px; font-weight:600; margin:6px 0 4px; }
+  p.hint { font-size:13px; color:var(--dim); margin:0 0 12px; }
+  canvas { width:100%; height:auto; background:#0b0e14; border-radius:12px; touch-action:none; cursor:grab; display:block; }
+  canvas:focus-visible { outline:3px solid #2563eb; outline-offset:2px; }
+  canvas.dragging { cursor:grabbing; }
+  #readout { font-variant-numeric:tabular-nums; font-size:14px; color:var(--dim); margin-top:10px; }
+  #readout b { color:var(--ink); }
+  @media (prefers-reduced-motion: reduce) { canvas { transition:none !important; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>__TITLE__</h1>
+  <p class="hint">拖动圆上的黄点（或用 Tab 聚焦后按 ← →），看 cos 与 sin 同步变化。</p>
+  <canvas id="cv" width="720" height="340" tabindex="0" role="application"
+          aria-label="单位圆：拖动圆上的点，观察余弦与正弦变化"></canvas>
+  <div id="readout" aria-live="polite"></div>
+  <div id="selftest-out" hidden></div>
+</div>
+<script>
+(function () {
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  var out = document.getElementById('readout');
+  var theta = 50 * Math.PI / 180;
+  var CX = 170, CY = 170, R = 118;
+  var X0 = 390, X1 = 690, YMID = 170, AMP = 96;
+
+  function draw() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    // —— 左：单位圆 ——
+    ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(CX - R - 16, CY); ctx.lineTo(CX + R + 16, CY);
+    ctx.moveTo(CX, CY - R - 16); ctx.lineTo(CX, CY + R + 16); ctx.stroke();
+    var px = CX + R * Math.cos(theta), py = CY - R * Math.sin(theta);
+    // cos 投影（水平，蓝）
+    ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(px, CY); ctx.stroke();
+    // sin 投影（垂直，橙）
+    ctx.strokeStyle = '#fb923c';
+    ctx.beginPath(); ctx.moveTo(px, CY); ctx.lineTo(px, py); ctx.stroke();
+    // 半径
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(px, py); ctx.stroke();
+    // 可拖拽手柄
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.arc(px, py, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#0b0e14'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = '#60a5fa'; ctx.font = '13px sans-serif';
+    ctx.fillText('cos θ', CX + 6, CY + (Math.sin(theta) > 0 ? 18 : -8));
+    ctx.fillStyle = '#fb923c';
+    ctx.fillText('sin θ', px + (Math.cos(theta) > 0 ? 10 : -46), CY - R * Math.sin(theta) / 2);
+
+    // —— 右：两条曲线随 θ 联动 ——
+    ctx.strokeStyle = '#1f2937';
+    ctx.beginPath(); ctx.moveTo(X0, YMID); ctx.lineTo(X1, YMID); ctx.stroke();
+    var i, x, c, s;
+    for (var which = 0; which < 2; which++) {
+      ctx.strokeStyle = which ? '#fb923c' : '#60a5fa';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (i = 0; i <= 120; i++) {
+        var t = Math.PI * 2 * i / 120;
+        var v = which ? Math.sin(t) : Math.cos(t);
+        x = X0 + (X1 - X0) * i / 120;
+        var y = YMID - AMP * v;
+        if (i === 0) { ctx.moveTo(x, y); } else { ctx.lineTo(x, y); }
+      }
+      ctx.stroke();
+    }
+    var xc = X0 + (X1 - X0) * (theta / (Math.PI * 2));
+    ctx.strokeStyle = '#475569'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(xc, YMID - AMP - 10); ctx.lineTo(xc, YMID + AMP + 10); ctx.stroke();
+    ctx.fillStyle = '#60a5fa';
+    ctx.beginPath(); ctx.arc(xc, YMID - AMP * Math.cos(theta), 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fb923c';
+    ctx.beginPath(); ctx.arc(xc, YMID - AMP * Math.sin(theta), 5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function report() {
+    var deg = (theta * 180 / Math.PI + 360) % 360;
+    out.innerHTML = 'θ = <b>' + deg.toFixed(0) + '°</b>　cos θ = <b>' + Math.cos(theta).toFixed(3) +
+      '</b>　sin θ = <b>' + Math.sin(theta).toFixed(3) + '</b>　（勾股恒等式 cos²+sin² = ' +
+      (Math.cos(theta) * Math.cos(theta) + Math.sin(theta) * Math.sin(theta)).toFixed(3) + '）';
+  }
+
+  function setFromEvent(ev) {
+    var r = cv.getBoundingClientRect();
+    var x = (ev.clientX - r.left) * (cv.width / r.width);
+    var y = (ev.clientY - r.top) * (cv.height / r.height);
+    theta = Math.atan2(CY - y, x - CX);
+  }
+  var dragging = false;
+  cv.addEventListener('pointerdown', function (ev) {
+    dragging = true; cv.classList.add('dragging'); cv.focus();
+    if (cv.setPointerCapture) { try { cv.setPointerCapture(ev.pointerId); } catch (e) {} }
+    setFromEvent(ev); draw(); report(); ev.preventDefault();
+  });
+  cv.addEventListener('pointermove', function (ev) { if (dragging) { setFromEvent(ev); draw(); report(); } });
+  cv.addEventListener('pointerup', function () { dragging = false; cv.classList.remove('dragging'); });
+  cv.addEventListener('pointercancel', function () { dragging = false; cv.classList.remove('dragging'); });
+  cv.addEventListener('keydown', function (ev) {
+    var step = (ev.shiftKey ? 15 : 5) * Math.PI / 180;
+    if (ev.key === 'ArrowLeft') { theta += step; }
+    else if (ev.key === 'ArrowRight') { theta -= step; }
+    else { return; }
+    draw(); report(); ev.preventDefault();
+  });
+  draw(); report();
+
+  function signature() {
+    var d = ctx.getImageData(0, 0, cv.width, cv.height).data, s = 0;
+    for (var i = 0; i < d.length; i += 4 * 97) { s = (s * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7) % 1000000007; }
+    return s;
+  }
+  function colorCount() {
+    var d = ctx.getImageData(0, 0, cv.width, cv.height).data, st = {};
+    for (var i = 0; i < d.length; i += 4) { st[d[i] + ',' + d[i + 1] + ',' + d[i + 2]] = 1; }
+    return Object.keys(st).length;
+  }
+  window.__SET_ANGLE__ = function (deg) { theta = deg * Math.PI / 180; draw(); report(); return { deg: deg, cos: Math.cos(theta), sin: Math.sin(theta), sig: signature() }; };
+  window.__SELFTEST__ = function () {
+    var a = window.__SET_ANGLE__(30);
+    var b = window.__SET_ANGLE__(210);
+    var checks = {
+      '画布非空': colorCount() > 20,
+      '拖拽改变图形': a.sig !== b.sig,
+      '读数与数学一致': Math.abs(a.cos - Math.cos(Math.PI / 6)) < 0.001 && Math.abs(a.sin - 0.5) < 0.001,
+      '键盘可达(tabindex)': cv.tabIndex >= 0,
+      '指针事件已绑定': typeof cv.onpointerdown !== 'undefined'
+    };
+    var failed = Object.keys(checks).filter(function (k) { return checks[k] === false; });
+    return { pass: failed.length === 0, checks: checks, failed: failed };
+  };
+  function runSelftest() {
+    var res = window.__SELFTEST__();
+    var el = document.getElementById('selftest-out');
+    el.hidden = false;
+    el.textContent = 'SELFTEST ' + JSON.stringify(res);
+    document.title = 'SELFTEST ' + (res.pass ? 'PASS' : 'FAIL');
+  }
+  window.__RUN_SELFTEST__ = runSelftest;
+  if (location.hash === '#selftest') { runSelftest(); }
+})();
+</script>
+</body>
+</html>

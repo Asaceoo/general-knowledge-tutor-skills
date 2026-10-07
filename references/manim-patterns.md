@@ -25,9 +25,45 @@ Shot 3 | 画面：高亮 y=0 这条渐近线，标注「极限值=0」
 
 ## 二、环境与渲染
 
+### 2.1 依赖探测必须跨解释器（v1.5.1 起强制）
+
+`python -c "import manim"` 只反映**当前解释器**。实测环境中 PATH 上的 `python` 是一个干净解释器，manim 却装在另一个 venv 里——单解释器探测会返回「无 manim」，让整条链路白白降级到 matplotlib GIF（而实测 manim 渲染 `-ql` 只要 6.6 秒，能力完全可用）。**先扫全部解释器，落成「环境画像」，Phase 4 全程按画像用绝对路径调用：**
+
+```powershell
+$pys = @()
+$pys += (Get-Command python -All | ForEach-Object { $_.Source })
+$pys += (py -0p 2>$null | ForEach-Object { ($_ -split '\s+')[-1] })
+$pys += (Get-ChildItem "$env:USERPROFILE\.workbuddy\binaries\python\envs\*\Scripts\python.exe" -EA SilentlyContinue).FullName
+$pys += (Get-ChildItem "$env:USERPROFILE\anaconda3\envs\*\python.exe" -EA SilentlyContinue).FullName
+$probe = 'import importlib.util as u; print([m for m in ["manim","pyvista","vpython","pymunk","edge_tts","genanki","matplotlib"] if u.find_spec(m)])'
+foreach ($p in ($pys | Sort-Object -Unique)) {
+  if (Test-Path $p) { Write-Output ("$p  ==>  " + (& $p -c $probe)) }
+}
+```
+
+> 实测依赖可能**跨环境分布**：manim 在 A 环境，pyvista / vpython / pymunk / edge-tts / genanki 在 B 环境。按能力分别调用各自解释器，不要为了「统一」而重复安装。`py -0p` 只列注册过的安装、PATH 只列 PATH 上的——两者都会漏掉 venv，必须补目录扫描。
+
+### 2.2 LaTeX（公式类主题的硬依赖，v1.5.1 新增）
+
+`MathTex` / `Tex` 需要系统级 `latex` + `dvisvgm`，**只装 manim 不够**，而本节原先只提 cairo/pango/ffmpeg。探测：
+
 ```bash
-# 探测
-python -c "import manim; print(manim.__version__)"
+python -c "import shutil; print(shutil.which('latex'), shutil.which('dvisvgm'))"
+```
+
+两者为 `None` 时 `MathTex` 直接渲染失败（实测：报错退出、无任何产物）。实测本机装了 MiKTeX 但 bin 不在 PATH，加上即恢复渲染：
+
+```powershell
+$env:PATH = "$env:LOCALAPPDATA\Programs\MiKTeX\miktex\bin\x64;$env:PATH"   # 会话级；永久生效用 setx / 系统环境变量
+```
+
+装不了 LaTeX 时的降级顺序：`MathTex` → `Text` + Unicode 数学符号 → matplotlib mathtext 渲成 PNG 再用 `ImageMobject` 插入（三步都必须真实渲染验证）。
+
+### 2.3 两段式渲染（替代「3 分钟硬阈值」）
+
+第一段 `-ql` 出样片（秒级）确认构图/节奏/字体，第二段 `-qm`/`-qh` 只跑一次交付档。迭代期**保留缓存**，`--disable_caching` 只在需要强制重渲时用。
+
+```bash
 # 安装（隔离 venv 优先）
 pip install manim            # 需要 system 依赖 cairo/pango/ffmpeg
 
@@ -38,6 +74,9 @@ manim -ql scene.py SceneName
 # 高清交付
 manim -qh scene.py SceneName
 ```
+
+> **音频（SoX）**：manim 自带音频合成依赖 SoX，缺失时渲染开头会警告 `SoX could not be found`（不影响画面）。配音不要走这条路——用 `references/extended-viz-2.md` 的 edge-tts + ffmpeg 合体管线（不依赖 SoX）。
+
 产物在 `./media/videos/scene/.../SceneName.mp4`。渲染后确认文件存在且大小合理（>10KB）再交付。
 
 ## 三、可复用场景模板

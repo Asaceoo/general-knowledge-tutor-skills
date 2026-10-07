@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__TITLE__</title>
+<style>
+  :root { --bg:#0f1117; --ink:#e5e7eb; --dim:#94a3b8; }
+  body { font-family:"Microsoft YaHei",system-ui,sans-serif; margin:0; background:var(--bg); color:var(--ink); }
+  #wrap { max-width:780px; margin:0 auto; padding:16px; }
+  h1 { font-size:17px; font-weight:600; margin:6px 0 4px; }
+  p.hint { font-size:13px; color:var(--dim); margin:0 0 12px; }
+  canvas { width:100%; height:auto; background:#0b0e14; border-radius:12px; touch-action:none; cursor:grab; display:block; }
+  canvas.dragging { cursor:grabbing; }
+  canvas:focus-visible { outline:3px solid #2563eb; outline-offset:2px; }
+  #readout { font-variant-numeric:tabular-nums; font-size:14px; color:var(--dim); margin-top:10px; }
+  #readout b { color:var(--ink); }
+  @media (max-width:480px) { canvas { border-radius:8px; } }
+  @media (prefers-reduced-motion: reduce) { #readout { transition:none !important; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>__TITLE__</h1>
+  <p class="hint">拖动末端蓝点（或 Tab 聚焦后用 ← → ↑ ↓）——每节连杆长度被约束住，整条链会自动重排。</p>
+  <canvas id="cv" width="720" height="400" tabindex="0" role="application"
+          aria-label="连杆约束演示：拖动末端，其余关节按长度约束自动求解"></canvas>
+  <div id="readout" aria-live="polite"></div>
+  <div id="selftest-out" hidden></div>
+</div>
+<script>
+(function () {
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+  var out = document.getElementById('readout');
+  var ITER = 20, GRAV = 0.55, DAMP = 0.985;
+
+  function N(x, y, fixed) { return { x: x, y: y, px: x, py: y, fixed: !!fixed }; }
+  var nodes = [N(150, 320, true)];
+  var LINK = 86, COUNT = 5;
+  for (var i = 1; i <= COUNT; i++) { nodes.push(N(150 + LINK * i, 320)); }
+  var edges = [];
+  for (var j = 0; j < COUNT; j++) { edges.push({ a: nodes[j], b: nodes[j + 1], len: LINK }); }
+  var tip = nodes[nodes.length - 1];
+
+  function satisfy() {
+    for (var it = 0; it < ITER; it++) {
+      for (var k = 0; k < edges.length; k++) {
+        var e = edges[k], a = e.a, b = e.b;
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var d = Math.sqrt(dx * dx + dy * dy) || 1e-6;
+        var diff = (d - e.len) / d * 0.5, ox = dx * diff, oy = dy * diff;
+        if (!a.fixed) { a.x += ox; a.y += oy; }
+        if (!b.fixed) { b.x -= ox; b.y -= oy; }
+      }
+    }
+  }
+  function integrate() {
+    for (var i = 1; i < nodes.length; i++) {
+      var n = nodes[i];
+      if (n === tip && dragging) { n.px = n.x; n.py = n.y; continue; }
+      var vx = (n.x - n.px) * DAMP, vy = (n.y - n.py) * DAMP;
+      n.px = n.x; n.py = n.y;
+      n.x += vx; n.y += vy + GRAV;
+    }
+    satisfy();
+  }
+
+  function maxEdgeError() {
+    var m = 0;
+    for (var k = 0; k < edges.length; k++) {
+      var e = edges[k], dx = e.b.x - e.a.x, dy = e.b.y - e.a.y;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      m = Math.max(m, Math.abs(d - e.len) / e.len);
+    }
+    return m;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    // 参考网格
+    ctx.strokeStyle = '#141a24'; ctx.lineWidth = 1;
+    for (var gx = 0; gx < cv.width; gx += 40) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, cv.height); ctx.stroke(); }
+    for (var gy = 0; gy < cv.height; gy += 40) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(cv.width, gy); ctx.stroke(); }
+    // 连杆
+    ctx.lineCap = 'round'; ctx.lineWidth = 11; ctx.strokeStyle = '#334155';
+    for (var k = 0; k < edges.length; k++) {
+      ctx.beginPath(); ctx.moveTo(edges[k].a.x, edges[k].a.y); ctx.lineTo(edges[k].b.x, edges[k].b.y); ctx.stroke();
+    }
+    ctx.lineWidth = 4; ctx.strokeStyle = '#64748b';
+    for (var k2 = 0; k2 < edges.length; k2++) {
+      ctx.beginPath(); ctx.moveTo(edges[k2].a.x, edges[k2].a.y); ctx.lineTo(edges[k2].b.x, edges[k2].b.y); ctx.stroke();
+    }
+    // 关节
+    for (var i = 1; i < nodes.length - 1; i++) {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath(); ctx.arc(nodes[i].x, nodes[i].y, 6, 0, Math.PI * 2); ctx.fill();
+    }
+    // 固定基座 + 可拖末端
+    ctx.fillStyle = '#94a3b8';
+    ctx.beginPath(); ctx.arc(nodes[0].x, nodes[0].y, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath(); ctx.arc(tip.x, tip.y, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#0b0e14'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = '#0b0e14'; ctx.font = 'bold 11px sans-serif';
+    ctx.fillText('拖', tip.x - 6, tip.y + 4);
+  }
+
+  function report() {
+    out.innerHTML = '末端 (<b>' + tip.x.toFixed(0) + ', ' + tip.y.toFixed(0) + '</b>)　' +
+      '节数 ' + COUNT + ' × 定长 <b>' + LINK + '</b>　' +
+      '最大长度误差 <b>' + (maxEdgeError() * 100).toFixed(2) + '%</b>　' +
+      '基座到末端 <b>' + Math.hypot(tip.x - nodes[0].x, tip.y - nodes[0].y).toFixed(0) + ' px</b>' +
+      '（上限 ' + (LINK * COUNT) + '）';
+  }
+
+  var dragging = false, dragOffset = { x: 0, y: 0 };
+  function toCanvas(ev) {
+    var r = cv.getBoundingClientRect();
+    return { x: (ev.clientX - r.left) * (cv.width / r.width), y: (ev.clientY - r.top) * (cv.height / r.height) };
+  }
+  cv.addEventListener('pointerdown', function (ev) {
+    var p = toCanvas(ev);
+    if (Math.hypot(p.x - tip.x, p.y - tip.y) > 60) { return; }
+    dragging = true; cv.classList.add('dragging'); cv.focus();
+    dragOffset = { x: tip.x - p.x, y: tip.y - p.y };
+    if (cv.setPointerCapture) { try { cv.setPointerCapture(ev.pointerId); } catch (e) {} }
+    ev.preventDefault();
+  });
+  cv.addEventListener('pointermove', function (ev) {
+    if (!dragging) { return; }
+    var p = toCanvas(ev);
+    tip.x = p.x + dragOffset.x; tip.y = p.y + dragOffset.y;
+    tip.px = tip.x; tip.py = tip.y;
+    satisfy(); draw(); report(); ev.preventDefault();
+  });
+  function endDrag() { dragging = false; cv.classList.remove('dragging'); }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+  cv.addEventListener('keydown', function (ev) {
+    var s = ev.shiftKey ? 24 : 8, moved = true;
+    if (ev.key === 'ArrowLeft') { tip.x -= s; }
+    else if (ev.key === 'ArrowRight') { tip.x += s; }
+    else if (ev.key === 'ArrowUp') { tip.y -= s; }
+    else if (ev.key === 'ArrowDown') { tip.y += s; }
+    else { moved = false; }
+    if (!moved) { return; }
+    tip.px = tip.x; tip.py = tip.y;
+    satisfy(); draw(); report(); ev.preventDefault();
+  });
+
+  function frame() { integrate(); draw(); report(); requestAnimationFrame(frame); }
+  draw(); report();
+  if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches) { requestAnimationFrame(frame); }
+
+  function signature() {
+    var d = ctx.getImageData(0, 0, cv.width, cv.height).data, s = 0;
+    for (var i = 0; i < d.length; i += 4 * 89) { s = (s * 31 + d[i] + d[i + 1] * 3 + d[i + 2] * 7) % 1000000007; }
+    return s;
+  }
+  function colorCount() {
+    var d = ctx.getImageData(0, 0, cv.width, cv.height).data, st = {};
+    for (var i = 0; i < d.length; i += 4) { st[d[i] + ',' + d[i + 1] + ',' + d[i + 2]] = 1; }
+    return Object.keys(st).length;
+  }
+  window.__DRAG_TO__ = function (x, y) {
+    tip.x = x; tip.y = y; tip.px = x; tip.py = y;
+    for (var i = 0; i < 60; i++) { satisfy(); }
+    draw(); report();
+    return { tipX: tip.x, tipY: tip.y, err: maxEdgeError(), sig: signature() };
+  };
+  window.__SELFTEST__ = function () {
+    var a = window.__DRAG_TO__(560, 140);
+    var b = window.__DRAG_TO__(300, 360);
+    var checks = {
+      '画布非空': colorCount() > 20,
+      '拖动改变图形': a.sig !== b.sig,
+      '约束守恒（边长误差<1%）': Math.max(a.err, b.err) < 0.01,
+      '末端不可超出可达范围': Math.hypot(b.tipX - nodes[0].x, b.tipY - nodes[0].y) <= LINK * COUNT * 1.01,
+      '读数联动': a.tipX !== b.tipX,
+      '键盘可达(tabindex)': cv.tabIndex >= 0
+    };
+    var failed = Object.keys(checks).filter(function (k) { return checks[k] === false; });
+    return { pass: failed.length === 0, checks: checks, failed: failed };
+  };
+  window.__RUN_SELFTEST__ = function () {
+    var res = window.__SELFTEST__();
+    var el = document.getElementById('selftest-out');
+    el.hidden = false;
+    el.textContent = 'SELFTEST ' + JSON.stringify(res);
+    document.title = 'SELFTEST ' + (res.pass ? 'PASS' : 'FAIL');
+    return res;
+  };
+  if (location.hash === '#selftest') { window.__RUN_SELFTEST__(); }
+})();
+</script>
+</body>
+</html>

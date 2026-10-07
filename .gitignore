@@ -1,0 +1,11 @@
+# 构建产物（zip 由 package.py 生成，随 release 发布而非入库）
+dist/
+
+# 回归工作目录（真机渲染中间产物，非源码）
+scripts/_reg_work/
+scripts/__pycache__/
+__pycache__/
+*.pyc
+
+# 发布用下载物
+_glb/

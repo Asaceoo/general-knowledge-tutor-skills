@@ -143,6 +143,30 @@ class MyScene(VoiceoverScene):
 
 **边界**：edge-tts 依赖微软在线接口（离线不可用）；交付时 mp3 与学习卡同目录、主卡里相对路径引用。离线场景降级为纯文字通俗版（v1.1.3 双文档已覆盖）。
 
+### 3.1 配音与动画合体（v1.5.1 新增，真机实测）
+
+manim-voiceover 在受限网络下走不通（上方取证），但**「动画 3 秒播完、解说 8 秒念不完」这个原始痛点不必放弃**：edge-tts 出音频 + ffmpeg 合成，全程不依赖 SoX、不依赖 Google 服务。实测产出 50 KB 单文件 mp4，同时含 h264 视频流与 aac 音频流。
+
+```bash
+# 1) 语音 + 字幕一次出（--write-subtitles 直接得到 srt，UTF-8 无 BOM，实测时间轴正确）
+edge-tts --voice zh-CN-XiaoxiaoNeural \
+         --text "熵是无序度的度量，这就是它的本质。" \
+         --write-media explain.mp3 --write-subtitles explain.srt
+
+# 2) 与动画合体（-c:v copy 不重编码，秒级完成）
+ffmpeg -y -i scene.mp4 -i explain.mp3 -c:v copy -c:a aac -shortest out.mp4
+
+# 3) 字幕作为软字幕轨（看片端可开关；要烧进画面则去掉 -c:v copy 改滤镜）
+ffmpeg -y -i out.mp4 -i explain.srt -c:v copy -c:a copy -c:s mov_text out_sub.mp4
+
+# 4) 自检：必须同时看到 video 与 audio 两条流
+ffprobe -v error -show_entries stream=codec_type,codec_name -of csv=p=0 out.mp4
+```
+
+分镜已按 ~4 字/秒 估过时长（见 manim-patterns.md §一）：逐镜 TTS 后按镜拼接即可让画面与解说对齐；不做逐镜对齐时，`-shortest` 能保证不出现「音频播完画面还在动」的尾巴。
+
+> 与 SoX 的关系：manim 自带音频合成依赖 SoX（本机缺装，渲染时警告 `SoX could not be found`），本条管线完全绕开它。
+
 ---
 
 ## 4. 交互自测 HTML + genanki —— 学习闭环
@@ -215,6 +239,60 @@ html = f'<model-viewer src="data:model/gltf-binary;base64,{b64}" auto-rotate></m
 4. headless 截图 WebGL 需 `--enable-unsafe-swiftshader`；**Chrome 对工作区目录写截图文件可能被拒**（0x5 拒绝访问）→ `--screenshot` 指到 `%TEMP%`。
 
 **边界**：model-viewer 依赖 CDN 加载 JS（受限网络下确认 jsdelivr 可达）；纯离线场景降级为第一批的 mp4/GIF 路线。
+
+> **更高质量的 glb 来源（v1.5.4）**：本节用 trimesh 造模型，几何简陋、无材质；本机装了 Blender 时应改由 Blender 导出 glb（PBR 材质完整），路线与实测数据见 3d-animation.md §3-E.2，模板 references/templates/model-viewer-template.html。
+
+**离线自足档（v1.5.1 新增）**：交付物要能脱离网络双击打开时，把库**内联**进 HTML，或落到同目录 `assets/` 相对引用。实测 CDN 体积：`three@0.128 three.min.js` **589 KB**、`@google/model-viewer` 913 KB、`echarts` 1005 KB——内联后单文件在 0.6–1.4 MB 量级，完全可接受；仅在「体积优先且观看方在线」时才用 CDN 版本。
+
+```bash
+# 取库到本地（离线自足档第一步）；或把 min.js 内容直接写进 <script>…</script> 得到单文件
+curl -L -o assets/three.min.js https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js
+```
+
+> 内联注意：库源码若含字面 `</script>` 会截断脚本块（与 quiz 模板同一条坑，任何运行时转义都救不了），必要时写 `<\/script>`。
+
+---
+
+## 6. 交互产物自测（SELFTEST 约定，v1.5.2 新增）
+
+**是什么**：任何交互产物（canvas 滑块组件 / Three.js 场景 / vpython HTML / model-viewer 单文件）统一暴露 `window.__SELFTEST__()` 返回 `{pass, checks, note}`；以 `#selftest` 打开时把结果写进 DOM，形如 `SELFTEST {"pass":true,...}`。两个入口：
+
+- 模板（四件）：`selftest-web-template.html`（滑块/画布：非空 + 交互断言 + WebGL 断言 + a11y）、`drag-interactive-template.html`（**拖对象·自由拖**：单位圆 + 指针/键盘 + 读数与数学一致性断言）、`constraint-drag-template.html`（**拖对象·约束拖**：连杆链 + 边长守恒断言）、`model-viewer-template.html`（glb → 单文件可拖拽 3D）
+- 断言器：`python scripts/selftest_web.py <产物.html>`（Chrome headless 真机跑一遍，退出码 0=通过 / 1=失败 / 2=环境问题）
+
+**为什么**：静态图能靠肉眼，交互产物不能——白屏、死控件、CDN 没加载，全都「长得像一个正常页面」。这是 quiz 模板 `#selftest` 模式的推广。
+
+**实测（2026-10-07，Chrome headless=new + `--disable-gpu`）**：headless 下 **WebGL 可渲染且可断言**——`gl.readPixels` 返回 `51,102,204,255`，正是 `clearColor(0.2,0.4,0.8,1)` 的期望值；2D canvas 用「不同颜色数 > 20」判定非空。反面用例（空白画布）被正确判 FAIL、退出码 1——**证明断言不是永真**。
+
+```bash
+python scripts/selftest_web.py                        # 自检内置模板
+python scripts/selftest_web.py 产物/主题—3D结构.html   # 断言具体产物（默认加 #selftest 锚点）
+python scripts/selftest_web.py 产物.html --json       # 机器可读
+```
+
+**页面侧最小实现**：
+
+```js
+window.__SELFTEST__ = function () {
+  const checks = {
+    '画布非空': distinctColors() > 20,        // 空白画布 = 1 种颜色
+    '交互改变图形': sigBefore !== sigAfter,  // 改参数重绘后指纹必须变
+    'WebGL可渲染': webglOk                    // 拿不到 context 时返回 'skip'，不硬判失败
+  };
+  const failed = Object.keys(checks).filter(function (k) { return checks[k] === false; });
+  return { pass: failed.length === 0, checks: checks, failed: failed };
+};
+if (location.hash === '#selftest') {
+  document.getElementById('selftest-out').textContent =
+    'SELFTEST ' + JSON.stringify(window.__SELFTEST__());
+}
+```
+
+**坑表（实测）**：
+0. **WebGL 拿不到 context 要判 `skip`，不要判 fail**——`--disable-gpu` 下多数机器走 SwiftShader 正常，但个别环境真的没有；硬判失败会把「环境限制」误报成「产物坏了」。个别 Chrome 版本还需 `--enable-unsafe-swiftshader`（断言器已默认带上）。
+1. **断言必须基于像素/状态**，不能恒定返回 `true`——本文档配了反面用例（不绘制任何东西）来固化这一点。
+2. `getImageData` 受同源限制：`file://` 打开时若把外部图片贴进 canvas（`drawImage`）会**污染画布**并让读取抛错；纯代码绘制（`fillRect`/`lineTo`）不受影响。
+3. 自测代码本身别写 `</script>` 字面量（HTML 解析层截断，见 quiz 模板同款坑），必要时写 `<\/script>`。
 
 ---
 

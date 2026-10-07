@@ -38,6 +38,29 @@ anim = ani.FuncAnimation(fig, update, frames=20, interval=120)
 anim.save("limit.gif", writer="pillow")
 ```
 
+**升级档：帧序列 → MP4（v1.5.1 起为过程类动画的首选降级）**
+
+GIF 只有 256 色，渐变必带色带，体积也大得多。同一组 40 帧 360×240 实测：**GIF 104.6 KB vs MP4 19.4 KB（约 1/5）**。先落帧序列：
+
+```python
+import os, numpy as np                      # 本块可独立运行：只负责落帧，编码交给 ffmpeg
+import matplotlib.pyplot as plt
+os.makedirs("frames", exist_ok=True)
+x = np.linspace(0, 2*np.pi, 300)
+for i in range(12):
+    fig, ax = plt.subplots(figsize=(4, 8/3), dpi=90)   # 宽高取偶数：libx264 硬要求
+    ax.plot(x, np.sin(x + i/6.0), lw=2); ax.set_ylim(-1.2, 1.2)
+    fig.savefig(f"frames/f_{i:03d}.png"); plt.close(fig)
+print("frames:", len(os.listdir("frames")))
+```
+
+```bash
+ffmpeg -y -framerate 20 -i frames/f_%03d.png -c:v libx264 -pix_fmt yuv420p \
+       -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" out.mp4
+```
+
+> **两条实测坑**：① **libx264 要求宽高均为偶数**——`figsize=(4, 2.5)` 得到 360×225，直接报 `height not divisible by 2` 并让整条编码失败，`dpi` 与 `figsize` 都要凑偶数（或带上上面的 `scale` 兜底）；② GIF 路线若要压体积，用 ffmpeg 两遍法（`palettegen` + `paletteuse=dither=sierra2_4a`）比 PillowWriter 明显更小。
+
 ## B. plotly — 可缩放交互图（分布/三维/关系）
 
 ```python
@@ -75,6 +98,12 @@ open("dag.svg", "w", encoding="utf-8").write(svg)
 要点：
 - 用 `<input type="range">` + `<canvas>` 或内联 SVG，JS 监听 `input` 事件实时重算。
 - 适配主题：浅色主题下用浅色背景 + 深色文字；不确定主题时用中性配色。
+- **交付前必须自测（v1.5.2）**：暴露 `window.__SELFTEST__()` 与 `#selftest` 输出，用 `python scripts/selftest_web.py <产物.html>` 断言「画布非空 + 交互改变图形」；模板见 references/templates/selftest-web-template.html，约定见 extended-viz-2.md §6。
+- **无障碍与移动端**：带 `<meta name="viewport">`、`:focus-visible` 焦点样式、动画类加 `prefers-reduced-motion` 兜底、窄屏不横向溢出。
+- **交互分三类，按需选（v1.5.5 起明确）**：① **拖参数**（滑块驱动重绘，本节上方骨架）；② **拖对象**（直接拖点/矢量/原子，教学直觉最强——模板 `references/templates/drag-interactive-template.html`：单位圆拖拽 + cos/sin 实时联动）；③ **拖视角**（3D 轨道旋转，走 `3d-animation.md` §3-E.2 的 glb 路线）。
+- **拖对象型必须双通道**：指针拖拽 + 键盘（`tabindex` + ←/→ 微调），只做鼠标等于把键盘用户挡在门外；拖动时给 `cursor:grab/grabbing` 与焦点环反馈。
+- **拖对象再分两档（v1.5.6）**：**自由拖**（拖点即所拖，模板 `drag-interactive-template.html`）与**约束拖**（拖一个点，其余按约束自动重排——连杆/杠杆/滑轮/分子键角，模板 `constraint-drag-template.html`：5 节连杆，末端可拖，关节用迭代松弛满足「每节定长」）。约束拖的教学价值更高：读者看到的是**整个系统重新平衡**，而不只是一个数字在变。
+- **约束型必须有守恒断言**：`selftest_web.py` 要断言「边长误差 < 1%」这类**不变量**，否则图形动了也证明不了约束真的成立。
 
 最小骨架：
 ```html
@@ -91,7 +120,7 @@ document.getElementById('r').oninput=e=>draw(+e.target.value);draw(0.1);
 
 ## E. 选择决策
 
-- 要「过程/演化/讲到哪画到哪」→ Manim（首选）或 matplotlib-GIF。
+- 要「过程/演化/讲到哪画到哪」→ Manim（首选）；无 Manim 时 matplotlib 帧序列 → ffmpeg MP4，GIF 只用于循环展示或聊天内贴图。
 - 要「可缩放探索数据」→ plotly HTML。
 - 要「体系/依赖结构」→ SVG / Mermaid。
 - 要「调参建直觉」→ 交互式 HTML 组件（交付方式见 D 节）。

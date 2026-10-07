@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__TITLE__</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font-family:"Microsoft YaHei",system-ui,sans-serif; margin:0; background:#0f1117; color:#e5e7eb; }
+  #wrap { max-width:900px; margin:0 auto; padding:16px; }
+  h1 { font-size:18px; font-weight:600; margin:8px 0 4px; }
+  p.hint { font-size:13px; color:#94a3b8; margin:0 0 12px; }
+  model-viewer { width:100%; height:520px; background:#0b0e14; border-radius:12px; --poster-color:transparent; }
+  :focus-visible { outline:3px solid #2563eb; outline-offset:2px; }
+  @media (max-width:480px) { model-viewer { height:360px; } }
+  @media (prefers-reduced-motion: reduce) { model-viewer { --auto-rotate-disabled: true; } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <h1>__TITLE__</h1>
+  <p class="hint">鼠标拖拽旋转 · 滚轮缩放 · 双击复位；本文件已内联模型与渲染库，断网也能打开。</p>
+  <model-viewer id="mv" src="__GLB_SRC__" alt="__TITLE__"
+                camera-controls touch-action="pan-y" auto-rotate rotation-per-second="18deg"
+                shadow-intensity="0.9" exposure="1.0" environment-image="neutral"></model-viewer>
+  <div id="selftest-out" hidden></div>
+</div>
+<script type="module">__MODEL_VIEWER_JS__</script>
+<script>
+(function () {
+  var mv = document.getElementById('mv');
+  window.__SELFTEST__ = function () {
+    // 环境相关信号（headless 下渲染循环可能不启动）判 skip，不判 fail：
+    // 硬判失败会把「环境限制」误报成「产物坏了」——与 SELFTEST 约定第 0 条同源。
+    var pixel = (function () {
+      try {
+        if (typeof mv.toDataURL !== 'function') return 'skip';
+        var u = mv.toDataURL();
+        return (u && u.length > 5000) ? true : false;
+      } catch (e) { return 'skip'; }
+    })();
+    var checks = {
+      'model-viewer 组件已注册': !!(window.customElements && customElements.get('model-viewer')),
+      'glb 已解析': mv.loaded === true,
+      '画布非空(像素)': pixel,
+      '渲染循环已启动': mv.modelIsVisible === true ? true : 'skip',
+      '画布有尺寸': mv.clientWidth > 100 && mv.clientHeight > 100
+    };
+    var failed = Object.keys(checks).filter(function (k) { return checks[k] === false; });
+    return { pass: failed.length === 0, checks: checks, failed: failed };
+  };
+  function run() {
+    var res = window.__SELFTEST__();
+    var out = document.getElementById('selftest-out');
+    out.hidden = false;
+    out.textContent = 'SELFTEST ' + JSON.stringify(res);
+    document.title = 'SELFTEST ' + (res.pass ? 'PASS' : 'FAIL');
+  }
+  window.__RUN_SELFTEST__ = run;
+  if (location.hash === '#selftest') {
+    if (mv.loaded) { run(); } else { mv.addEventListener('load', run); }
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>交互组件模板（含 SELFTEST 自测约定）</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family:"Microsoft YaHei",system-ui,sans-serif; max-width:680px; margin:24px auto; padding:0 16px; line-height:1.6; }
+  canvas { width:100%; max-width:480px; height:auto; border-radius:8px; background:#f8fafc; display:block; }
+  label { display:block; margin-top:14px; }
+  input[type=range] { width:100%; max-width:480px; }
+  button { padding:8px 20px; border:0; border-radius:8px; background:#2563eb; color:#fff; font-size:14px; cursor:pointer; }
+  :focus-visible { outline:3px solid #2563eb; outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+  @media (max-width:480px) { body { margin:12px auto; } h1 { font-size:20px; } }
+</style>
+</head>
+<body>
+<h1>指数衰减：调 λ 看变化</h1>
+<canvas id="plot" width="480" height="240" role="img" aria-label="指数衰减曲线，随衰减率 λ 变化"></canvas>
+<label for="lam">衰减率 λ = <output id="lamv">0.10</output></label>
+<input id="lam" type="range" min="0.01" max="0.30" step="0.01" value="0.10">
+<p><button id="reset" type="button">重置</button></p>
+<div id="selftest-out" hidden></div>
+<script>
+(function () {
+  const cv = document.getElementById('plot'), ctx = cv.getContext('2d');
+  const lam = document.getElementById('lam'), lamv = document.getElementById('lamv');
+
+  function curveSignature() {            // 蓝线逐列首次命中的行号 = 曲线形状指纹
+    const d = ctx.getImageData(0, 0, cv.width, cv.height).data, sig = [];
+    for (let x = 0; x < cv.width; x++) {
+      let hit = -1;
+      for (let y = 0; y < cv.height; y++) {
+        const i = (y * cv.width + x) * 4;
+        if (d[i + 2] > d[i] + 40 && d[i + 2] > 120) { hit = y; break; }
+      }
+      sig.push(hit);
+    }
+    return sig.join(',');
+  }
+  function distinctColors() {            // 非空断言：不同颜色数（空白画布 = 1）
+    const d = ctx.getImageData(0, 0, cv.width, cv.height).data, s = new Set();
+    for (let i = 0; i < d.length; i += 4) s.add(d[i] + ',' + d[i+1] + ',' + d[i+2]);
+    return s.size;
+  }
+  function draw(r) {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.beginPath();
+    for (let x = 0; x < cv.width; x++) {
+      const y = cv.height - Math.exp(-r * x / 40) * (cv.height - 20);
+      x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  function setLam(v) { lam.value = String(v); lamv.textContent = (+v).toFixed(2); draw(+v); }
+  lam.addEventListener('input', () => setLam(lam.value));
+  document.getElementById('reset').addEventListener('click', () => setLam(0.10));
+  setLam(0.10);
+
+  function webglProbe() {                // WebGL 非空断言（headless 走 SwiftShader，实测可用）
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 32;
+      const gl = c.getContext('webgl') || c.getContext('experimental-webgl');
+      if (!gl) return { ok: null, note: 'no-webgl-context' };
+      gl.clearColor(0.2, 0.4, 0.8, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+      const px = new Uint8Array(4); gl.readPixels(8, 8, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const ok = Math.abs(px[0] - 51) < 6 && Math.abs(px[1] - 102) < 6 && Math.abs(px[2] - 204) < 6;
+      return { ok: ok, note: 'readPixels=' + Array.from(px).join(',') };
+    } catch (e) { return { ok: false, note: 'throw:' + e.message }; }
+  }
+
+  // —— SELFTEST 约定（v1.5.2）：交互 / 3D 产物统一暴露本函数 ——
+  window.__SELFTEST__ = function () {
+    const sig0 = curveSignature(), colors0 = distinctColors();
+    setLam(0.28);
+    const sig1 = curveSignature();
+    const wg = webglProbe();
+    const checks = {
+      '画布非空': colors0 > 20,
+      '曲线已绘制': sig0.indexOf('-1') !== 0,
+      '交互改变图形': sig0 !== sig1,
+      '控件联动': lamv.textContent === '0.28',
+      'WebGL可渲染': wg.ok === null ? 'skip' : wg.ok
+    };
+    const failed = Object.keys(checks).filter(k => checks[k] === false);
+    return { pass: failed.length === 0, checks: checks, note: wg.note, failed: failed };
+  };
+  function runSelftest() {
+    const res = window.__SELFTEST__();
+    const out = document.getElementById('selftest-out');
+    out.hidden = false;
+    out.textContent = 'SELFTEST ' + JSON.stringify(res);
+    document.title = 'SELFTEST ' + (res.pass ? 'PASS' : 'FAIL');
+    return res;
+  }
+  window.__RUN_SELFTEST__ = runSelftest;
+  if (location.hash === '#selftest') runSelftest();
+})();
+</script>
+</body>
+</html>

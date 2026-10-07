@@ -103,12 +103,12 @@ compatibility: >-
 
 | 概念类型 | 首选可视化 | 工具 | 降级方案 |
 |---|---|---|---|
-| 过程 / 流程 / 演化 | 动画 | **Manim 分镜**（见 references/manim-patterns.md） | matplotlib 时序帧 + GIF |
+| 过程 / 流程 / 演化 | 动画 | **Manim 分镜**（见 references/manim-patterns.md） | matplotlib 帧序列 → ffmpeg MP4（循环场景用 GIF） |
 | 几何 / 证明 / 空间 | 动画 + 标注 | Manim | SVG 静态图 |
 | 数据 / 分布 / 关系 | 图表 | matplotlib / plotly | SVG 手绘 |
 | 概念 / 体系 / 依赖 | 图 | Mermaid / SVG | 文本缩进树 |
 | 可探索参数 | 交互组件 | 内联/独立 HTML widget（滑块 + canvas/SVG） | 静态多状态图 |
-| 空间结构 / 旋转 / 螺旋 / 场 | 3D 动画 / 交互 3D | **五层选型**（见 references/3d-animation.md）：mplot3d→GIF（零依赖兜底）→ PyVista（质量主力）→ vpython（教学仿真）→ Three.js（卡内交互）→ Blender bpy（电影级） | 静态 3D 多视角 PNG |
+| 空间结构 / 旋转 / 螺旋 / 场 | 3D 动画 / 交互 3D | **五层选型**（见 references/3d-animation.md）：mplot3d→GIF（零依赖兜底）→ PyVista（质量主力）→ vpython（教学仿真）→ Three.js（卡内交互）→ Blender 应用（电影级：出 mp4，或导 glb 做可拖拽单文件） | 静态 3D 多视角 PNG |
 | 场 / 曲面 / 体渲染 | 3D 科学可视化 | PyVista（深度排序正确，见 references/extended-viz.md） | matplotlib mplot3d 多视角 PNG |
 | 物理 / 轨道 / 仿真教学 | 3D 仿真动画 | vpython（几行代码出动画，见 references/extended-viz.md） | p5.js 动画 / 分步静态图 |
 | 函数 / 几何交互探索 | 内嵌 applet | GeoGebra / Desmos iframe（见 references/extended-viz.md） | 滑块 HTML widget |
@@ -118,17 +118,65 @@ compatibility: >-
 | 讲解可听化 / 3D 可交互 / 自测闭环 | 配音 / 单文件 3D / 测验 | **edge-tts**（中文语音）+ **model-viewer**（glb 内嵌 HTML）+ 自测 HTML/genanki（见 references/extended-viz-2.md） | 纯文字通俗版 / mp4 动画 |
 
 > 3D 启用门槛：仅在「空间结构本身承载信息」时使用（旋转→振荡、螺旋、场、曲面、轨道）；能用 2D 讲清的不上 3D。选型与坑（深度伪影、无缝环绕、CDN 降级）见 references/3d-animation.md。
+>
+> **3D 优先档（v1.5.6，双向门控）**：默认**倾斜向 3D**——凡知识点本身带空间维度（结构 / 旋转 / 轨道 / 场 / 曲面 / 机构 / 光路 / 拓扑 / 晶格 / 分子构型），**默认就产出 3D 产物，不等用户点名**；交互优先（glb 可拖拽 > 视频录制），本机无 Blender 时用 PyVista / Manim / 交互 HTML 顶上。
+> **判定问句（一句话）**：把 3D 换成 2D，会不会丢掉「转一下才能看见」的信息？**会 → 默认上 3D；不会 → 老实做 2D**，硬上只会加认知负担。
+> 反向门控不变：概念定义、数据分布、流程时间线这类没有空间维度的内容，仍然不上 3D。
+>
+> **2D 备选图强制（v1.5.2）**：凡选 3D，必须同时产出一张同概念的 2D 备选图（最直白的那个视角），用于降级、离线阅读与快速浏览——降级要真·就绪，而不是临时补。
+>
+> **🔎 3D 与 Blender 调用决策清单（v1.5.7，Phase 4 可视化选型必读）**
+>
+> 过闸顺序**从左到右**，任一闸不通过就走它的「否则」分支。**不要因为「本机装了 Blender」就到处用**——E 层是最高成本档，不是默认档。
+>
+> ```text
+> 闸①  有空间维度吗？（3D 启用门槛）
+>      判定问句：把 3D 换成 2D，会不会丢掉「转一下才能看见」的信息？
+>      否 → 老实做 2D：概念定义 / 数据分布 / 流程时间线 / 体系 DAG
+>
+> 闸②  是不是公式推导、数据分布、参数探索？（反向门控）
+>      是 → 分别交给 Manim（讲到哪画到哪）/ matplotlib+plotly / 交互 HTML
+>
+> 闸③  本机有什么？（依赖探测，四个都要探，别只探一个）
+>      blender.exe：PATH → 常见目录（Program Files\Blender Foundation\*）→ 注册表；Windows 上它通常不在 PATH
+>      trimesh / pyvista / manim：`python -c "import X"` —— 必须**跨解释器**扫（见下方「Manim 工作法」第 0 步），单解释器探测会误判「没装」
+>      **探测结论 = 环境现状，不是能力上限**：trimesh / pyvista / manim 都是 pip 包，**允许先装再用**（隔离 venv 优先）；只有 Blender 是桌面应用、装不了才真没有。
+>      确实一个都用不了 → 降到 mplot3d + GIF（零依赖兜底）或交互 HTML，并在交付物注明降级原因
+>
+> 闸④  质感 / 体积 / 真实仿真 / 运镜 是否不可替代？（质感门槛）
+>      否（场、曲面、体数据）→ PyVista：更快、更科学、深度排序正确
+>      是（光路 / 机构 / 晶格 / 流体 / 拓扑 / 分子构型）→ 想上 E 层 Blender
+>           但 Blender 不在本机时，**按能力拆开降级、别硬塞给做不了的库**：
+>           · 光路/材质/运镜 → mplot3d 或 Manim ThreeDScene（质感打折但能出）
+>           · 刚体/流体/烟雾仿真 → pymunk（2D 物理引擎，真数值）或 Manim 手绘帧；PyVista **做不了**动力学仿真
+>           · 晶格/分子构型/拓扑 → trimesh 或 PyVista 建网格 + 导出 glb/PNG（静态但几何精确）
+> ```
+>
+> **过了闸④之后，Blender 有两种出口，优先上面那条**：
+>
+> 1. **glb + model-viewer**（默认首选）：导出带材质 glb → 与渲染库一起 base64 内联成单文件 HTML，**读者自己转着看，断网可开**。这对应交互优先档的「glb 可拖拽 > 视频录制」。
+>    **glb 有两个来源，别绑死在 Blender 上**：本机有 Blender → `export_scene.gltf`（PBR 材质完整，见 §3-E.2）；**没有 Blender 也能出**——`trimesh` 纯 Python 造 glb（几何较简陋、无材质），**所以「没装 Blender」不等于「做不了可交互 3D」**，不要直接跳到录像或静态图。
+> 2. **mp4 / gif 录像**：只在确实需要运镜叙事时才用——观众只能被动看。
+>
+> **两条硬规则**：一是**上了 E 层不等于只用 Blender**（场与曲面归 PyVista，公式推导归 Manim，Blender 只吃它独占的能力：Cycles 光追、Mantaflow 流体、刚体约束、glTF 导出）；二是**凡上 3D 必配 2D 备选图**（v1.5.2），断网与低配设备的退路要真·就绪，不能临时补。
+>
+> 探测与实测细节（`--factory-startup` 的必要性、`bpy` 不是 pip 包、曲线不转网格会静默丢几何、EEVEE ~0.16 s/帧）见 references/3d-animation.md §三-E 与 §3-E.2。
+>
+> **成本与门槛**（选型时一并权衡）：mplot3d + GIF 零依赖、秒级、有伪影；PyVista 需 GPU、秒级~十秒级、深度排序正确；Manim 6~30 秒/件；vpython / Three.js / model-viewer 需浏览器（内联后可离线）；Blender 需本机安装 Blender **应用**（无需 `pip install bpy`；实测 320×180 简单场景 EEVEE ~0.16 s/帧、含启动约 5 秒，高分辨率/多采样才「分钟级」）。同等讲解效果下，选成本最低的那一档。
 
 **Manim 工作法**（重点）：
+0. **依赖画像先行**（v1.5.1 起强制）：`python -c "import manim"` 只反映**当前解释器**——实测 PATH 上的 `python` 是个干净解释器、manim 装在另一个 venv，单解释器探测会误判「没装」并让整条链路白白降级。先跨解释器扫描（`py -0p` + venv/conda 目录）落成环境画像，再按绝对路径调用；公式类主题另需探测 `latex`/`dvisvgm`（缺失时 `MathTex` 直接失败，见 references/manim-patterns.md §2.1–2.2）。
 1. 先写**分镜（storyboard）**：镜头列表，每镜含「画面内容 / 旁白 / 时长（按朗读语速 ~4 字/秒）」，让动画节奏贴合讲解。
 2. 再写 `Scene` 类脚本，复用 references/manim-patterns.md 的模板（逐笔写出、讲到哪画到哪）。
-3. 真实渲染：`manim -qm scene.py SceneName` 产出 mp4，确认文件生成且可播放后再交付。渲染失败则降级并说明；单件渲染超过 3 分钟未出产物 → 主动降级并注明（不无限等待）。
+3. **两段式渲染**：先 `-ql` 出样片确认构图/节奏/中文显示（实测 6.6 秒），确认后再 `-qm`/`-qh` 出交付档。渲染失败则降级并说明；单件超过 3 分钟未出产物 → 主动降级并注明（不无限等待）。
 
 > 🛑 STOP：可视化产物未通过真实运行自检（文件存在、可播放、中文显示正常）→ 不得进入 Phase 5，降级为低阶方案并注明。
 
 **Python 脚本工作法**：数据类可视化用 matplotlib/plotly 生成图片或 HTML；SVG 用代码生成以确保可缩放。所有脚本真实运行，不交付未执行的伪代码。
 
-**交互组件**：参数可拖动的解释（如调 λ 看指数衰减、调学习率看收敛）优先用运行环境的内联 HTML 组件能力交付；无该能力 → 产出独立 HTML 文件并在回复中给出路径。
+**交互组件**：参数可拖动的解释（如调 λ 看指数衰减、调学习率看收敛）优先用运行环境的内联 HTML 组件能力交付；无该能力 → 产出独立 HTML 文件并在回复中给出路径。交互分三类、按需选（v1.5.5 起明确）：**拖参数**（滑块驱动重绘）、**拖对象**（直接拖点/矢量/原子，教学直觉最强，模板 references/templates/drag-interactive-template.html）、**拖视角**（3D 轨道旋转，走 glb + model-viewer 单文件路线）；细节见 references/visualization-cookbook.md §D 与 references/3d-animation.md §3-E.2。
+
+**交互产物自测（v1.5.2 起强制）**：交互/3D 产物必须暴露 `window.__SELFTEST__()`，并用 `python scripts/selftest_web.py <产物.html>` 断言「画布非空 + 交互改变图形 + WebGL 可渲染」，**退出码 0 才能进入 Phase 5**（模板 references/templates/selftest-web-template.html，约定见 references/extended-viz-2.md §6）。同时满足无障碍底线：`<meta name="viewport">`、`:focus-visible`、动画类带 `prefers-reduced-motion`。
 
 ### Phase 5 — 交付（结构化学习包）
 

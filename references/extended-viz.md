@@ -218,3 +218,5 @@ export default makeScene2D(function* (view) {
 - [ ] 选型有据：优先零依赖与既有工具，扩展工具仅在填补空白时启用。
 - [ ] iframe 类（GeoGebra/Desmos）已注明需联网，并给出离线替代。
 - [ ] 中文显示正常（ECharts 原生 OK；D3/p5 需 CSS 指定字体）。
+- [ ] **交互产物已按 SELFTEST 约定自测**（`python scripts/selftest_web.py <产物>` 退出码 0；见 extended-viz-2.md §6）。
+- [ ] **无障碍与移动端**：`<meta name="viewport">`、`:focus-visible`、`prefers-reduced-motion`（有动画时）、窄屏可用。

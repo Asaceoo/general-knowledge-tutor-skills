@@ -106,3 +106,82 @@ python _audit_v121/audit_r5_pkg.py         # 实现者视角：package.py 9 个�
 ```
 
 > 注：audit_r5_scan.py 首版 B3「需弹选项 7 项」为 section 截断正则过宽（把 Phase 1–5 的编号项一并计入）导致的计数偏差，结论方向不变（5 维度 > 4 上限），已按修复后的 SKILL.md 复核。
+
+---
+
+## 第五批（v1.5.1 / v1.5.2 基线，2026-10-07）：可视化链路加固
+
+触发方式：真实使用本机环境跑通「安装 → 依赖探测 → 2D/3D 可视化」全链路，逐环节取证。
+
+| # | 视角 | 问题 | 真机证据 | 处置 | 状态 |
+|---|---|---|---|---|---|
+| R6-1 | AI 使用方 | **依赖探测只探当前解释器**：PATH 上的 `python` 是干净解释器，manim 装在另一个 venv → 技能误判「本机没装 manim」并降级到 matplotlib GIF | 真机：`C:\Program Files\Python312\python.exe` 无 manim；`envs\deeptutor` 有 manim 0.21.0 且 `-ql` **6.6 秒**出片 | manim-patterns §2.1 跨解释器扫描 + 环境画像；SKILL Phase 4 新增第 0 步；回归 `viz-跨解释器探测` | ✅ |
+| R6-2 | 实现者 | `MathTex` 模板从未探测 LaTeX 依赖 | 真机：`shutil.which('latex')=None`（MiKTeX 装了但 bin 不在 PATH）→ 渲染失败、无产物；把 MiKTeX bin 前置后同一场景渲染成功（4780 B PNG） | manim-patterns §2.2 探测 + PATH 修复 + 三级降级；TECHNICAL 坑表同步 | ✅ |
+| R6-3 | 实现者 | 2D 降级档只有 PillowWriter GIF（256 色、体积大） | 真机同 40 帧 360×240：**GIF 104.6 KB vs MP4 19.4 KB**；且 libx264 要求宽高偶数（360×225 直接整条失败） | cookbook 新增「帧序列 → ffmpeg MP4」升级档 + `scale=trunc(iw/2)*2` 兜底 + 坑表 | ✅ |
+| R6-4 | 实现者 | 配音与动画无法合体（manim-voiceover 受限网络不可用、SoX 缺装），「解说念不完」原始痛点未解 | 真机：edge-tts 出 mp3 + srt → ffmpeg `-c:v copy -c:a aac -shortest` 得 **50 KB mp4，h264 + aac 双流**（ffprobe 验证） | extended-viz-2 §3.1 合体管线（含软字幕 `mov_text` 与 ffprobe 自检） | ✅ |
+| R6-5 | 实现者 | PyVista 只用了离屏截图，透明体仍靠「淡化辅助元素」缓解；`open_movie` 缺后端未记录 | 真机：pyvista 0.49.0 具备 `enable_depth_peeling`/`ssaa`/`shadows`/`ssao`/EDL；default 环境**无 imageio/av/kaleido** | 3d-animation 质量档 + 文末可复制模板（回归真机执行）；TECHNICAL 坑表同步 | ✅ |
+| R6-6 | AI 使用方 | **交互/3D 产物无机器断言**：白屏、死控件、CDN 失败全都「看起来像正常页面」 | 真机：headless Chrome 下 WebGL 可渲染可断言（`readPixels=51,102,204,255`）；反面用例（空白画布）被判 FAIL、退出码 1 | SELFTEST 约定 + `scripts/selftest_web.py` + `templates/selftest-web-template.html`；回归 `selftest-web模板`/`selftest-web脚本` 两条真机断言 | ✅ |
+| R6-7 | AI 使用方 | CDN 依赖导致离线/内网白屏，且此前无体积依据判断内联是否可行 | 实测 three.min.js **589 KB** / model-viewer **913 KB** / echarts **1005 KB** | 离线自足档（内联进 HTML 或落本地 `assets/`）+ 坑表 | ✅ |
+| R6-8 | 实现者 | regression.py 在 GBK 控制台打印中文说明时 `UnicodeEncodeError` **中途崩溃**（跑完但不出结果） | 真机：`UnicodeEncodeError: 'gbk' codec can't encode character '\ufffd'` | `sys.stdout.reconfigure(encoding="utf-8")`；对子进程注入 `PYTHONIOENCODING=utf-8` | ✅ |
+| R6-9 | AI 使用方 | 无障碍/移动端完全空白：模板无 `prefers-reduced-motion`、`:focus-visible`、窄屏适配 | grep 两个模板均 0 命中 | 两个模板补 a11y 样式；SKILL / TECHNICAL / cookbook / extended-viz 自检清单加底线；回归 `viz-无障碍` | ✅ |
+| R6-10 | AI 使用方 | 3D 选型缺成本维度，降级靠「临时补」 | — | 3D 门槛补「2D 备选图强制」+ 成本档（mplot3d < PyVista < Manim < Blender）；回归 `viz-2D备选图` | ✅ |
+
+### 第五批新坑回灌
+
+- **「import 失败」≠「本机没装」**：Windows 没有全局包注册表，`py -0p` 只列注册过的安装、PATH 只列 PATH 上的，**两者都会漏掉 venv**。否定性结论必须写明搜索范围（「在我探测的解释器里没有」），范围不足就不能下结论。
+- **见到指向本机的硬编码路径（含本机用户名/盘符），第一动作是 `Test-Path`，不是解释它为何不适用**。本轮 R6-1 的路径就写在同一份 `regression.py` 里，曾被误判为「作者环境专用」而跳过。
+- **断言必须配反面用例**：不绘制任何东西的页面如果也能判 PASS，说明断言是永真的——回归里的 `selftest-web模板` 与空白画布对照共同固化这一点。
+- **无头 WebGL 可用但不可假定**：多数机器 `--disable-gpu` 即走 SwiftShader 正常，个别 Chrome 版本需 `--enable-unsafe-swiftshader`（断言器已默认带上）；拿不到 context 时应判 `skip` 而非 fail，避免把环境限制误报为产物损坏。
+- **中文输出要有编码防线**：脚本在 GBK 控制台打印中文说明会崩，且往往崩在「跑完准备汇总」的最后一步——症状是「有过程没结论」。
+
+### 第五批回归/对抗命令
+
+```bash
+python scripts/regression.py                    # 全量回归（v1.5.3 基线 60 PASS / 1 SKIP / 0 FAIL）
+python scripts/selftest_web.py                  # 交互产物自测：内置模板自检
+python scripts/selftest_web.py <产物.html>       # 断言具体交互/3D 产物（退出码 0/1/2）
+# Blender E 层：bpy 代码块由回归用 `blender -b --factory-startup -P` 真机执行，不再 SKIP
+```
+
+### 第五批续（v1.5.3）：Blender E 层从「跳过」变为「真机执行」
+
+| # | 视角 | 问题 | 真机证据 | 处置 | 状态 |
+|---|---|---|---|---|---|
+| R6-11 | 实现者 | 回归对 bpy 代码块一律 SKIP，理由写的是「bpy 依赖 Blender wheel(330MB)，环境未装」——**把「pip 里没有 bpy」当成了「本机没有 Blender」** | 本机实际装有 **Blender 5.2.2 LTS**（`C:\Program Files\Blender Foundation\Blender 5.2\blender.exe`，注册表可查）；`bpy` 是 Blender **自带**模块，用 `blender -b -P` 根本不需要那个 wheel | 探测改为「PATH → 常见目录 → 注册表 Uninstall 键」；run_blocks 识别 `import bpy` 时改用 `blender -b --factory-startup -P` 真机执行；删除该 SKIP 条目 | ✅ |
+| R6-12 | 实现者 | 引擎可用性判断错误：`RenderSettings.bl_rna.properties['engine'].enum_items` 在 5.2.2 只返回 `['BLENDER_EEVEE']`，据此会得出「没有 Cycles」的错误结论 | 真机：`bpy.app.build_options.cycles = True`，直接 `scn.render.engine = 'CYCLES'` 成功，CPU 8 采样渲染 0.2 s 出图 | 文档写明**不要用 enum_items 判断**，改为「赋值 + try」；并给出 EEVEE 无头失败时切 Cycles CPU 的兜底 | ✅ |
+| R6-13 | AI 使用方 | 「Blender 成本高（分钟级）」的说法让 E 层被默认回避，实际未测 | 真机（320×180 简单场景，Blender 5.2.2）：EEVEE 首帧 1.0 s、后续 **0.16 s/帧**；12 帧合计 2.8 s，含启动墙钟 5.1 s；ffmpeg 合成 mp4 6.4 KB | 成本档按实测改写；模板改为「先小分辨率出样片再抬规格」 | ✅ |
+
+**第五批续新坑回灌**：
+
+- 「某个 pip 模块找不到」**不等于**「对应的桌面应用没装」——Blender/PyVista/VTK 这类都自带运行时，先查应用再下结论。
+- **不要用枚举去找能力**：动态枚举（如 Blender 的 engine）会漏项，能用「赋值 + try」验证的，就别读枚举列表。
+- 应用类依赖（Blender、Chrome、ffmpeg）**常年不在 PATH**：探测必须叠加「常见目录 + 注册表」，否则会重演 R6-1 的误判。
+
+
+---
+
+## 第六批（v1.5.7 → v1.5.8，2026-10-07）：Blender 调用决策清单固化后的三视角复审
+
+触发方式：把「3D 与 Blender 调用决策清单」固化进 SKILL.md/TECHNICAL.md 后，按实现者/审查者/AI 使用方三视角做对抗性复审，并以真机取证。
+
+| # | 视角 | 问题 | 真机证据 | 处置 | 状态 |
+|---|---|---|---|---|---|
+| R7-1 | 审查者 | **新清单无任何回归断言**：清单可被静默删除或改坏而全量回归仍全绿（与 R5-13「文档漂移无断言」同类，属复发） | 静态扫描：`regression.py` 中 `调用决策清单` 0 命中，而 SKILL/TECHNICAL 均有 | 新增 `viz-Blender决策清单` 断言：两份文档必须同时含清单，且四道闸关键词齐全 + glb 出口 + 探测三级 | ✅ |
+| R7-2 | AI 使用方 | **清单把「可交互 3D」隐含绑定到 Blender**：闸③写「找不到 blender.exe → PyVista/Manim/交互 HTML」，会漏掉 trimesh 这条零 Blender 的 glb 通道 → AI 在无 Blender 机器上直接跳到录像或静态图，丢掉最优出口 | 文档交叉比对：`extended-viz-2.md §5` 明载 trimesh→glb→model-viewer 且「实测通过（截图验证）」，与清单闸③结论矛盾 | 闸③改为同时探 blender.exe 与 trimesh；出口段补「glb 有两个来源，别绑死在 Blender 上」 | ✅ |
+| R7-3 | AI 使用方 | **把「探测不到」误当成「装不了」**：清单只写探测，未区分「pip 包可临时装」与「桌面应用装不了」，会导致无 trimesh 环境下误降级 | 本机实测：Python312 / uv-cpython3.12.13 / anaconda base **三个解释器 scan 均无** trimesh、pyvista、manim（只有 matplotlib）——正是「探测不到」的典型环境 | 闸③补「探测结论=环境现状而非能力上限；trimesh/pyvista/manim 允许先装再用（隔离 venv 优先）；只有 Blender 是桌面应用」 | ✅ |
+| R7-4 | AI 使用方 | **降级路径把能力塞错库**：闸④「是→E 层 Blender」，无 Blender 时统一指向 PyVista，但 PyVista **做不了刚体/流体动力学仿真**（那是 Blender 刚体约束/Mantaflow 的独占能力） | 场景推演：齿轮传动/流体主题在本机（无 Blender 时）按原清单会得到「用 PyVista」的无效结论 | 闸④补按能力拆分的降级表：光路/材质/运镜→mplot3d 或 Manim ThreeDScene；刚体/流体→pymunk 或 Manim 手绘帧；晶格/分子构型/拓扑→trimesh/PyVista 建网格导 glb/PNG | ✅ |
+| R7-5 | 实现者 | 断言若写成恒真则毫无防护力（历史教训：不绘制任何东西的页面也能判 PASS） | 反永真用例真机跑：真实文档→true；抽掉 SKILL 清单→false；抽掉 TECHNICAL 清单→false；删「质感门槛」→false；删 `blender.exe`→false；删 glb 出口→false（7/7 符合预期） | 断言按「两份文档同源 + 闸关键词 + 出口 + 探测」多点合取，任一缺失即 FAIL | ✅ |
+| R7-6 | 实现者 | 后台任务输出为空 + exit 1，被误读成「脚本跑挂了」（实际是工具层长命令转后台的表现，回归真实结果 PASS 68 / SKIP 1 / FAIL 0） | 同一命令前台跑输出为空、`job_list` 显示 exit 1；改用 Python wrapper 直跑得完整 74 行输出与 `SYSTEMEXIT 0` | 结论：**空输出 ≠ 脚本失败**，判断回归成败必须以「汇总行/退出码/marker」为准，不能以「有没有输出」为准 | ✅ |
+
+**第六批新坑回灌**：
+
+- **文档里新增规则，必须同时新增断言**——否则规则只是「写在纸上」，回归给不出任何保障（R7-1 是 R5-13 的复发，说明「新增文档时补断言」要成为固定动作，而不是事后补救）。
+- **「没有 X」不等于「不能用 X」**：pip 包（trimesh/pyvista/manim）可以先装；只有桌面应用（Blender/Chrome/ffmpeg）才存在「装不了」。清单里的降级分支必须区分这两类。
+- **降级要按能力拆**，不能按「层级」一刀切：PyVista 不是 Blender 的通用替代品（它擅长场/曲面，不做动力学仿真），错的映射会让 AI 得到一个「能跑但答非所问」的方案。
+- **空输出先怀疑工具层，再怀疑脚本**：长命令被转后台时会表现为「无输出 + 非零退出」，与脚本崩溃同形；用 wrapper 直跑 + 打印 marker 是可靠的分辨手段。
+
+### 第六批回归/对抗命令
+
+```bash
+python scripts/regression.py            # 全量回归（v1.5.7 基线 68 PASS / 1 SKIP / 0 FAIL）
+```

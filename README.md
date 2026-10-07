@@ -5,7 +5,7 @@
 
 **面向读者：想直接用它学习的人 → 看本手册。想了解实现原理、二次开发 → 看 [TECHNICAL.md](TECHNICAL.md)（技术手册）。**
 
-> 当前版本：v1.5.0（2026-10-07）· 更新日志见 [TECHNICAL.md](TECHNICAL.md) §7
+> 当前版本：v1.5.8（2026-10-07）· 更新日志见 [TECHNICAL.md](TECHNICAL.md) §7
 ---
 
 ## 一、这是什么
@@ -53,9 +53,9 @@ cp -r general-knowledge-tutor-skills ~/.claude/skills/general-knowledge-tutor   
 | 依赖 | 作用 | 缺失时的行为 |
 |---|---|---|
 | Python 3.10+ + numpy + matplotlib | 图表 / GIF 动画（主力兜底） | 无 Python 时产出可复制的脚本，请用户运行 |
-| manim（`pip install manim`） | 电影级动画 mp4 | 自动降级为 matplotlib GIF + SVG，并在交付中注明 |
+| manim（`pip install manim`） | 电影级动画 mp4 | 自动降级为 matplotlib 帧序列 → ffmpeg MP4（循环场景用 GIF）+ SVG，并在交付中注明 |
 | pyvista / vpython（可选） | 3D 科学可视化 / 物理教学仿真 | 自动降级为 mplot3d GIF 或 p5.js 动画 |
-| 本机 Blender（可选） | 电影级 3D 渲染（bpy 无头渲染，无需 Manim） | 跳过，用其他 3D 层 |
+| 本机 Blender **应用**（可选，实测 5.2.2） | 电影级 3D：材质/光照/运镜，`blender -b --factory-startup -P` 无头渲染（**不需要 `pip install bpy`**） | 探测不到则跳过，用 PyVista / Manim 层 |
 | 浏览器 | 查看交互式 HTML 组件（含 ECharts/D3/p5.js/GeoGebra/Desmos 扩展组件） | — |
 | pymunk / edge-tts / genanki / trimesh（可选，v1.2.0 第二批次） | 物理引擎真实模拟 / 中文语音讲解 mp3 / Anki 记忆卡 / 3D 模型单文件 HTML | 对应能力自动跳过或降级（见降级链） |
 
@@ -212,7 +212,7 @@ cp -r general-knowledge-tutor-skills ~/.claude/skills/general-knowledge-tutor   
 ## 七、常见问题（FAQ）
 
 **Q1：没装 Manim 会怎样？**
-自动走降级链：Manim mp4 → matplotlib 多帧 GIF → SVG 静态图 → 文字分步说明。每级降级都会在交付物中如实标注，不会假装是动画。
+自动走降级链：Manim mp4 → matplotlib 帧序列 + ffmpeg MP4（循环场景用 GIF）→ SVG 静态图 → 文字分步说明。每级降级都会在交付物中如实标注，不会假装是动画。注意探测是**跨解释器**的：PATH 上的 `python` 干净，不代表本机没装 manim（实测二者常分属不同 venv），技能会按绝对路径调用对应环境。
 
 **Q2：中文乱码怎么办？**
 技能内置防线：matplotlib 需在绘图前设置 `font.family`（如 Microsoft YaHei）与 `axes.unicode_minus: False`，模板中已写好。
@@ -221,16 +221,19 @@ cp -r general-knowledge-tutor-skills ~/.claude/skills/general-knowledge-tutor   
 质量约束禁止编造。事实优先核验（有联网工具则搜索交叉验证），无法核验的显式标「待核验」并给出验证路径。
 
 **Q4：交互组件打不开？**
-独立 HTML 文件双击用浏览器打开即可；其中 Three.js 3D 组件首次加载需联网（CDN），失败时页面会显示降级提示并指向静态 GIF。GeoGebra/Desmos 内嵌组件同样需联网。
+独立 HTML 文件双击用浏览器打开即可；其中 Three.js 3D 组件首次加载需联网（CDN），失败时页面会显示降级提示并指向静态 GIF。GeoGebra/Desmos 内嵌组件同样需联网。需要**离线也能看**时点名一句即可走「离线自足档」：把库内联进 HTML（three 589 KB / model-viewer 913 KB / echarts 1005 KB，单文件 0.6–1.4 MB）。
 
 **Q5：和直接问 AI「讲讲 X」的区别？**
 直接问得到一篇作文（质量看运气）；本技能强制走五阶段 + 质量门控（🛑 STOP 检查点）+ 反例黑名单，输出确定性更高，且可视化产物可复现（脚本随交付落盘）。
 
 **Q6：会上 3D 吗？什么时候用？**
-会，但有门槛：仅当空间结构本身承载信息（旋转→振荡、螺旋、场、轨道）时启用。3D 分五层自动选型（mplot3d 兜底 → PyVista 质量主力 → vpython 教学 → Three.js 交互 → Blender bpy 电影级），你本机装了 Blender 就能用最高档。
+会，而且**只要知识点带空间维度就默认上 3D**（v1.5.6 起默认倾斜）：结构、旋转、轨道、场、曲面、机构、光路、拓扑、晶格、分子构型——不等你点名，且优先给**可拖拽的**（glb 单文件）而不是只能看的视频。3D 分五层自动选型（mplot3d 兜底 → PyVista 质量主力 → vpython 教学 → Three.js 交互 → Blender 电影级 + glb 可交互）；没有空间维度的内容（概念、数据、流程）仍然做 2D。
 
 **Q7：一个概念要等多久？**
 速览版 1 次回复；完整学习卡含真实渲染的可视化，视环境通常 1–3 分钟（渲染占大头）。等不及可说「先出文字版，图后补」。
+
+**Q8：交互组件（滑块 / 3D）怎么保证不是白屏或死控件？**
+看得见的静态图靠肉眼，交互产物靠断言：技能约定每个交互/3D 产物暴露 `window.__SELFTEST__()`，交付前用 `scripts/selftest_web.py` 在无头 Chrome 里真跑一遍，断言「画布非空 + 拖参数图形真的变 + WebGL 真能渲染」，退出码 0 才交付（反面用例：空白画布会被判 FAIL）。模板见 references/templates/selftest-web-template.html。
 
 ## 八、反馈与贡献
 
