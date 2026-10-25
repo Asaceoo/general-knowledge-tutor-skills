@@ -185,3 +185,32 @@ python scripts/selftest_web.py <产物.html>       # 断言具体交互/3D 产�
 ```bash
 python scripts/regression.py            # 全量回归（v1.5.7 基线 68 PASS / 1 SKIP / 0 FAIL）
 ```
+---
+
+## 第七批（v1.5.7 → v1.5.9，2026-10-26）：文档重构 + 打包原子性复审
+
+触发方式：重写 README（含概念图）/ 用户手册 / 技术手册三份文档，同时按实现者 / 审查者 / AI 使用方三视角做对抗性复审，全部结论附真机证据。
+
+| # | 视角 | 问题 | 真机证据 | 处置 | 状态 |
+|---|---|---|---|---|---|
+| R8-1 | 实现者 | **package.py 版本递增非原子**：先写 VERSION 再同步手册，同步失败会留下「VERSION 已递增、手册没更新」的半成品，重跑还会继续叠加版本号 | 隔离副本 T6：把 TECHNICAL 的 `## 7. 版本` 改成别的标题 → `rc=1`，但复验发现 VERSION 已被推进；后续 T7 输出 `1.5.10 -> 1.5.11`，且版本史出现 `v1.5.11 → v1.5.9` 断档（缺 1.5.10） | 新增 `preflight_manuals()`：递增前预检三份手册锚点，任何一项不可定位即整体失败、磁盘零改动；写盘顺序改为「手册 → VERSION 最后」 | ✅ |
+| R8-2 | 审查者 | 新增第三份文档（用户手册）后，回归仍只校验「版本号四处一致」，且**不检查 README 配图是否真的存在**——文档链接可指向不存在的文件而全绿 | 改前 `doc-版本号四处一致` 只覆盖 VERSION/README/TECHNICAL/test-prompts；README 新增 6 张 `docs/images/*` 引用无任何断言 | 升为 `doc-版本号五处一致`（含 USER_GUIDE）；新增 `doc-用户手册存在`（非空壳）与 `doc-README配图`（引用数与磁盘存在性） | ✅ |
+| R8-3 | 实现者 | 重写技术手册时漏掉了坑表关键词，**回归立刻抓到**——证明断言不是装饰 | `tech-坑表同步 FAIL`；逐词核对：`libx264/SoX/kaleido/enable_depth_peeling/latex` 中 `kaleido=false` | 补 plotly 静态导出需 kaleido 的坑行；同时补 edge-tts 403 的坑行 | ✅ |
+| R8-4 | AI 使用方 | **环境受限被误报成产物损坏**：edge-tts 的 403 让回归报 FAIL，但同一份模板代码此前真机通过 | 复现：`WSServerHandshakeError 403`；排除法——系统时钟与 GitHub 服务器响应头一致（差 7 秒，排除时钟偏移）；强制 aiohttp `trust_env=True` 走代理后**仍 403**（排除地域封锁）；故为第三方服务鉴权/环境受限 | `run_blocks` 增加外部服务错误签名识别（WSServerHandshakeError / 403 / Cannot connect to host / Timeout 等）→ 判 SKIP 并附原文；代码级错误仍判 FAIL | ✅ |
+| R8-5 | 实现者 | README 概念图首版有布局缺陷（Phase 0 副标题溢出成竖排、能力矩阵表头压住首行、硬规则压住末行） | 逐张目视复核 4 张 PNG：01 图 Phase 0 文案竖排、02 图表头与末行重叠 | 调整坐标与字号重渲染，二次目视通过；绘图脚本 `scripts/make_readme_figures.py` 入库，图可复现 | ✅ |
+
+**第七批新坑回灌**：
+
+- **版本号写入必须最后一步**：先写版本再同步文档，任何一步失败都会留下「版本已变、文档没跟上」的半成品，而且重跑会让版本号跳跃，在版本史里留下断档。
+- **新增文档 = 新增断言**：文档数量从 2 份变 3 份时，「四处一致」必须同步升级为「五处」。断言写死的维度数量，是文档结构调整时最容易漏改的地方。
+- **配图链接要有存在性断言**：README 里 `![](docs/images/x.png)` 写成什么样都能渲染「通过」，只有断言文件真实存在才防得住删图不删引用。
+- **外部服务失败 ≠ 代码缺陷**：区分两者的证据链要能说出来（时钟比对、代理复测、同代码历史通过）。判 SKIP 时必须在说明里带上原始错误，避免把真缺陷藏进 SKIP。
+- **图也是产物**：概念图必须目视复核。matplotlib 的中文长文本不会自动换行，溢出会变成竖排，机器渲染成功不代表布局正确。
+
+### 第七批回归/对抗命令
+
+```bash
+python scripts/regression.py             # 全量回归（v1.5.9 基线 69 PASS / 2 SKIP / 0 FAIL）
+python scripts/make_readme_figures.py    # 重新生成 README 概念图
+python scripts/package.py --bump patch   # 原子递增 + 打包（先预检，失败不落盘）
+```

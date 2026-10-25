@@ -95,7 +95,20 @@ def run_blocks():
                          if l.strip() and not l.startswith(("Blender", "Saved:", "Fra:", "Info:"))]
                 results.append((label, "PASS", (cands[-1] if cands else "")[:80]))
             else:
-                results.append((label, "FAIL", (p.stderr.strip().splitlines() or [""])[-1][:140]))
+                err = (p.stderr.strip().splitlines() or [""])[-1][:160]
+                # 外部服务不可达 / 鉴权拒绝 = 环境受限，判 SKIP 而不是 FAIL：
+                # 依据是「同一份代码此前真机通过，失败来自第三方服务」——把环境问题
+                # 误报成产物损坏，会掩盖真正的模板缺陷（与 SELFTEST 约定第 0 条同源）。
+                # 实测样例：edge-tts 的 wss://speech.platform.bing.com 返回 403（2026-10-26，
+                # 系统时钟与 GitHub 服务器一致、走代理仍 403，排除时钟偏移与地域封锁）。
+                EXTERNAL = ("WSServerHandshakeError", "ClientConnectorError", "ClientOSError",
+                            "ServerDisconnectedError", "Cannot connect to host",
+                            "ConnectionResetError", "ConnectionError", "TimeoutError",
+                            "Invalid response status", "403")
+                if any(sig in err for sig in EXTERNAL):
+                    results.append((label, "SKIP", f"外部服务不可达/鉴权拒绝（环境受限）: {err[:110]}"))
+                else:
+                    results.append((label, "FAIL", err))
 
 
 def run_quiz():
@@ -228,19 +241,36 @@ def run_doc_consistency():
             miss.append(f"scripts/{f}")
     if "VERSION" not in tree:
         miss.append("VERSION")
+    if "USER_GUIDE.md" not in tree:
+        miss.append("USER_GUIDE.md")
     results.append(("doc-目录树覆盖", "PASS" if not miss else "FAIL", f"未提及: {miss or '无'}"))
 
-    # 4) 版本号四处一致：VERSION / README 锚点 / TECHNICAL 版本史 / test-prompts
+    # 4) 版本号五处一致：VERSION / README / 用户手册 / TECHNICAL 版本史 / test-prompts
     ver = open(os.path.join(BASE, "VERSION"), encoding="utf-8").read().strip()
     ra = re.search(r"当前版本：v(\d+\.\d+\.\d+)", readme)
+    ug_path = os.path.join(BASE, "USER_GUIDE.md")
+    ug = open(ug_path, encoding="utf-8").read() if os.path.isfile(ug_path) else ""
+    rg = re.search(r"当前版本：v(\d+\.\d+\.\d+)", ug)
     tl = re.search(r"- v(\d+\.\d+\.\d+)（\d{4}-\d{2}-\d{2}）", tech)
     tp = json.load(open(os.path.join(BASE, "test-prompts.json"), encoding="utf-8")).get("version")
     vals = {"VERSION": ver,
             "README": ra.group(1) if ra else "?",
+            "USER_GUIDE": rg.group(1) if rg else "?",
             "TECHNICAL": tl.group(1) if tl else "?",
             "test-prompts": tp}
     ok = len(set(vals.values())) == 1
-    results.append(("doc-版本号四处一致", "PASS" if ok else "FAIL", str(vals)))
+    results.append(("doc-版本号五处一致", "PASS" if ok else "FAIL", str(vals)))
+
+    # 5) 用户手册存在且不是空壳（v1.5.9 新增：三份文档缺一不可）
+    ug_ok = bool(ug) and len(ug) > 3000 and "## " in ug
+    results.append(("doc-用户手册存在", "PASS" if ug_ok else "FAIL",
+                    f"USER_GUIDE.md {len(ug)} 字节" if ug else "缺 USER_GUIDE.md"))
+
+    # 6) README 概念图必须真实存在（防「markdown 里有链接、磁盘上没文件」）
+    img_refs = re.findall(r"!\[[^\]]*\]\((docs/images/[^)]+)\)", readme)
+    missing_img = [p for p in img_refs if not os.path.isfile(os.path.join(BASE, p))]
+    results.append(("doc-README配图", "PASS" if img_refs and not missing_img else "FAIL",
+                    f"引用 {len(img_refs)} 张，缺失 {missing_img or 0}" if img_refs else "README 未引用任何概念图"))
 
 
 def run_package_bump():

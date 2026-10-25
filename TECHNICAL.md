@@ -1,270 +1,223 @@
-# TECHNICAL.md · 技术手册
+# 技术手册 · general-knowledge-tutor
 
-> 面向二次开发者、技能维护者与想深入理解工作流的用户。
-> 使用层面的问题请先看 [README.md](README.md)（用户手册）。
+> 面向技能维护者、二次开发者、以及想弄清「它凭什么可信」的读者。
+> 只想用它学习 → 看 [用户手册](USER_GUIDE.md)；想先了解这是什么 → 看 [README](README.md)。
+
+> 当前版本见 [VERSION](VERSION) 与 §7 版本史。
 
 ---
 
 ## 1. 系统架构
 
-```
+```text
 general-knowledge-tutor/
-├── SKILL.md                       # 技能主体：frontmatter + 五阶段工作流 + 质量门控
-├── references/
-│   ├── manim-patterns.md          # Manim 分镜规范 + 4 个可复用 Scene 模板 + 渲染/降级
-│   ├── visualization-cookbook.md  # matplotlib/plotly/SVG/交互 HTML 速查模板
-│   ├── 3d-animation.md            # 3D 五层选型（mplot3d/PyVista/vpython/Three.js/Blender bpy/ThreeDScene/plotly）+ 坑清单
-│   ├── extended-viz.md            # 扩展工具箱（ECharts/D3/p5.js/pyvis/schemdraw/Motion Canvas/GeoGebra/Desmos）+ 表达方式
-│   ├── extended-viz-2.md          # 扩展工具箱第二批次（Mermaid/pymunk/edge-tts/自测 HTML+genanki/trimesh→model-viewer），全部真机实测 + 9 条坑表
-│   ├── audit-checklist.md         # 三批对抗性审查台账（含回归命令），改动后必跑的兜底校验入口
-│   └── templates/
-│       ├── quiz-template.html     # 交互自测 HTML 模板（esc 转义防注入 + #selftest 自测模式 + 无障碍样式）
-│       ├── selftest-web-template.html  # 交互/3D 产物自测模板（SELFTEST 约定：非空/交互/WebGL 断言 + a11y）
-│       ├── drag-interactive-template.html  # 「拖对象」型交互模板（单位圆拖拽 + 指针/键盘双通道 + SELFTEST）
-│       ├── constraint-drag-template.html   # 「约束求解」型交互模板（连杆链：拖末端，其余关节按长度约束自动重排）
-│       └── model-viewer-template.html  # glb → 单文件可交互 3D（内联渲染库 + base64 glb + SELFTEST）
-├── scripts/
-│   ├── package.py                 # 一键打包：VERSION 单一来源 + --bump 自动递增 + 三手册版本同步 + zip 自检
-│   ├── regression.py              # 全量回归：references 代码块真机执行 + quiz/交互 headless 自测 + 双文档约束 + 结构与版本一致性
-│   └── selftest_web.py            # 交互/3D 产物 SELFTEST 断言器（Chrome headless，退出码 0=通过/1=失败/2=环境问题
+├── SKILL.md                       # 技能主体：frontmatter(description 触发词) + 五阶段工作流 + 质量门控
+├── README.md                      # 门面：概念图 + 能力概览 + 30 秒上手
+├── USER_GUIDE.md                  # 用户手册：安装、怎么问、产物怎么读、FAQ
+├── TECHNICAL.md                   # 本文件：架构、规范、脚本、坑表、版本史
 ├── VERSION                        # 版本号单一来源（package.py 读取并递增）
 ├── test-prompts.json              # 触发测试用例（should_trigger / should_not_trigger）
-├── README.md                      # 用户手册
-└── TECHNICAL.md                   # 本文件
+├── LICENSE
+├── references/
+│   ├── manim-patterns.md          # Manim 分镜规范 + 可复用 Scene 模板 + 渲染/降级
+│   ├── visualization-cookbook.md  # matplotlib/plotly/SVG/交互 HTML 速查模板
+│   ├── 3d-animation.md            # 3D 五层选型 + Blender E 层 + glb 出口 + 坑清单
+│   ├── extended-viz.md            # 扩展工具箱（ECharts/D3/p5.js/pyvis/schemdraw/GeoGebra/Desmos）
+│   ├── extended-viz-2.md          # 第二批次（Mermaid/pymunk/edge-tts/自测 HTML+genanki/trimesh→model-viewer）
+│   ├── audit-checklist.md         # 对抗性审查台账：改任何内容后必须过这张清单
+│   └── templates/
+│       ├── quiz-template.html             # 自测 HTML（esc 转义防注入 + #selftest 判分模式）
+│       ├── selftest-web-template.html     # SELFTEST 约定（非空/交互/WebGL 断言 + a11y）
+│       ├── drag-interactive-template.html # 拖对象型交互（单位圆拖拽 + 指针/键盘 + 断言）
+│       ├── constraint-drag-template.html  # 约束求解型交互（连杆链：拖末端，其余按边长重排）
+│       └── model-viewer-template.html     # glb→单文件可交互 3D（内联渲染库 + base64 glb）
+├── scripts/
+│   ├── package.py                 # 一键打包：VERSION 单一来源 + 原子递增 + 三份手册版本同步 + zip 自检
+│   ├── regression.py              # 全量回归：代码块真机执行 + headless 断言 + 文档一致性
+│   ├── selftest_web.py            # 交互/3D 产物断言器（Chrome headless，退出码 0/1/2）
+│   └── make_readme_figures.py     # 生成 README 概念图（matplotlib，输出到 docs/images）
+└── docs/images/                   # README 概念图与真实产出示例（打包时一并入包）
 ```
 
-设计定位：**声明式技能 + 两个工程脚本**——技能交付物（讲解卡/可视化/脚本）全部由智能体在运行时按模板生成，`scripts/` 下的两个脚本只服务于**技能自身的打包与回归**（不参与运行时交付）。好处：跨平台零适配成本；代价：依赖宿主智能体具备「写文件 + 执行命令」能力（缺失时的降级策略见 §4）。
+**设计定位**：声明式技能 + 少量工程脚本。技能交付物由智能体在运行时按模板生成；`scripts/` 下的脚本只服务**技能自身的打包、自检与回归**，不参与运行时交付。好处是跨平台零适配；代价是依赖宿主具备「写文件 + 执行命令」能力。
 
 ### 1.1 触发机制
 
-技能命中由 `SKILL.md` frontmatter 的 `description` 驱动。description 中显式埋入了触发词族：
+技能命中由 `SKILL.md` frontmatter 的 `description` 驱动，其中显式埋入触发词族：
 
 - 动作词：搞懂 / 理解 / 讲讲 / 原理 / 本质 / 科普 / 教学 / 入门 / 系统学
 - 方法词：第一性原理 / 可视化讲解 / 做个动画 / 面试讲解
+- 产物词：通俗版 / 讲给外行听 / 出几道题测测我 / 记忆卡
 
-测试用例（`test-prompts.json`）覆盖三类：典型命中、模糊命中（如「复利是不是利滚利」）、近似误触发（如「写个批量重命名脚本」应不命中）。改动 description 后应重跑判定。
+`test-prompts.json` 覆盖三类：典型命中、模糊命中（如「复利是不是利滚利」）、近似误触发（如「写个批量重命名脚本」应不命中）。改动 description 后必须重跑判定。
 
 ## 2. 五阶段工作流规范
 
 ### Phase 0 意图定位
-输入：用户 query。输出：`(主题, 深度∈{速览,精通,输出}, 覆盖∈{单点,带前置,完整体系}, 基础∈{零基础,有背景,专业}, 可视化⊆{动画,交互图,3D,配音,记忆卡})`。
-确认方式：用提问能力弹结构化选项（单选/多选），禁止开放式追问；用户已给则跳过该项。
-组合规则：深度=速览时忽略可视化与覆盖范围（只出通俗版）；覆盖范围默认对齐深度（速览→单点，精通→带前置，输出→完整体系），显式指定则覆盖。
-未确认时的默认值：`(精通, 带前置, 有相关背景, 可视化自动)`，且必须在交付物开头标注假设。
-**提问上限约束**：多数运行时的结构化提问一次最多 4 个问题，因此①主题从 query 推断、不单列；②「深度 + 覆盖范围」可合并为 1 问（如 `速览·单点`）；③仍超限则分两批（首批答完即可开工 Phase 1）；④多选维度必须提供「自动（交给技能决定）」显式选项（提问组件无「不选」机制）；⑤无提问能力时不追问，直接走默认值并标注。
-**门控 🔴 CHECKPOINT**：五项确认（或超时走默认）才可进入 Phase 1。
+输入：用户 query。输出五元组 `(主题, 深度, 覆盖, 基础, 可视化)`。
+确认方式：结构化选项，**禁止开放式追问**；用户已给则跳过。
+组合规则：深度=速览时忽略可视化与覆盖范围；覆盖范围默认对齐深度；显式指定则覆盖。
+提问上限：多数运行时一次最多 4 问，因此主题从 query 推断、深度与覆盖可合并、超限分两批、多选必须带「自动」兜底项。
+未确认默认值：精通 + 带前置 + 有相关背景 + 可视化自动，且必须在交付物开头标注该假设。
+门控：五项确认（或超时走默认）后才进入 Phase 1。
 
 ### Phase 1 第一性原理拆解
 产出三件套：假设清单（3–6 条，区分承重/情景）、原子事实（每条标来源类型）、推理链（每步「A+B→C」）。推理链是 Phase 3 讲解与 Phase 4 分镜的主干，不允许后补。
 
 ### Phase 2 体系化知识地图
-产出概念 DAG（核心层/支撑层/延伸层）+ 跨学科坐标。表达强制用 Mermaid（优先）或 SVG（兜底），禁止纯文字描述依赖关系。
+概念 DAG（核心层/支撑层/延伸层）+ 跨学科坐标。表达强制用 Mermaid（优先）或 SVG（兜底），禁止纯文字描述依赖关系。
 
 ### Phase 3 本质理解
 一句话本质（主谓宾，禁止循环定义）→ 1–2 个类比 → **每个类比必须紧跟失效边界** → 存在动机 → 适用条件与反例。
 
-### Phase 4 可视化生产（核心工程环节）
+### Phase 4 可视化生产
 选型矩阵（按概念类型）：
 
 | 概念类型 | 首选 | 降级链 |
 |---|---|---|
-| 过程/流程/演化 | Manim 分镜动画 | matplotlib 帧序列 → ffmpeg MP4（循环场景用 GIF）→ SVG + 分步文字 |
+| 过程/流程/演化 | Manim 分镜动画 | matplotlib 帧序列 → ffmpeg MP4（循环场景用 GIF）→ SVG 分步图 |
 | 几何/证明/空间 | Manim | SVG 静态图 |
 | 数据/分布/关系 | matplotlib / plotly | SVG 手绘 |
 | 概念/体系/依赖 | Mermaid / SVG | 文本缩进树 |
-| 可探索参数 | HTML widget（滑块+canvas） | 静态多状态图 |
-| 空间结构/旋转/场 | 3D（五层选型见 §3.3） | 多视角 3D PNG |
-| 场/曲面/体渲染 | PyVista | mplot3d 多视角 PNG |
+| 可探索参数 | HTML widget（滑块 + canvas） | 静态多状态图 |
+| 空间结构/旋转/场 | 3D（五层选型见 §3.3） | 静态 3D 多视角 PNG |
+| 场/曲面/体渲染 | PyVista（深度排序正确） | mplot3d 多视角 PNG |
 | 物理/轨道/仿真教学 | vpython | p5.js 动画 / 分步静态图 |
 | 函数/几何交互探索 | GeoGebra / Desmos iframe | 滑块 HTML widget |
 | 网络/关系/流向 | pyvis / graphviz；桑基等用 ECharts | Mermaid 手写 |
-| 结构/流程/状态机/体系 DAG | Mermaid 文本即图（Markdown 原生渲染） | graphviz 出 PNG |
+| 结构/流程/状态机/体系 DAG | Mermaid 文本即图 | graphviz 出 PNG |
 | 力学/碰撞/真实物理过程 | pymunk 物理引擎真实模拟 | matplotlib 手绘帧动画 |
-| 讲解可听化 / 3D 可交互 / 自测闭环 | edge-tts 配音 mp3 + model-viewer 单文件 3D + 自测 HTML/genanki | 纯文字通俗版 / mp4 动画 |
+| 讲解可听化 / 3D 可交互 / 自测闭环 | edge-tts 配音 + model-viewer 单文件 3D + 自测 HTML/genanki | 纯文字通俗版 / mp4 动画 |
 
-**3D 启用门槛**：仅当空间结构本身承载信息（旋转→振荡、螺旋、场、曲面、轨道）时启用；2D 能讲清的不上 3D。**3D 优先档（v1.5.6）**：带空间维度的知识点**默认产出 3D**（结构/旋转/轨道/场/曲面/机构/光路/拓扑/晶格/分子构型），交互优先（glb 可拖拽 > 视频），不依赖用户点名；判定问句＝把 3D 换成 2D 会不会丢掉「转一下才能看见」的信息——会就上，不会就老实做 2D。**2D 备选图强制（v1.5.2）**：凡选 3D，必须同时产出一张同概念的 2D 备选图（降级、离线阅读、快速浏览用）。**成本档**：mplot3d + GIF（秒级、零依赖）< PyVista（GPU，秒~十秒级）< Manim（6~30 秒/件）< Blender（分钟级、需本机安装）；vpython / Three.js / model-viewer 需浏览器，内联后可离线。
-**🔎 3D 与 Blender 调用决策清单（v1.5.7，与 SKILL.md 同源）**：四道闸从左到右过，任一不通过就走它的「否则」分支——**不要因为本机装了 Blender 就到处用**，E 层是最高成本档而非默认档。①**空间维度闸**（判定问句：把 3D 换成 2D 会不会丢掉「转一下才能看见」的信息？否→概念定义/数据分布/流程时间线/体系 DAG 老实做 2D）→②**反向门控**（公式推导→Manim，数据分布→matplotlib/plotly，参数探索→交互 HTML）→③**依赖探测**（**四个都探，别只探一个**：`blender.exe` 走 PATH→常见目录→注册表；trimesh/pyvista/manim 走 `import` 且必须**跨解释器**扫，单解释器会误判「没装」。**探测结论=环境现状而非能力上限**——trimesh/pyvista/manim 都是 pip 包，**允许先装再用**（隔离 venv 优先），只有 Blender 是桌面应用、装不了才真没有；确实都用不了才降 mplot3d+GIF 或交互 HTML 并注明）→④**质感门槛**（场/曲面/体数据→PyVista，更快更科学深度排序正确；只有光路/机构/晶格/流体/拓扑/分子构型这类需要 Cycles 光追、Mantaflow 流体、刚体约束、glTF 导出的才上 E 层；**Blender 不在本机时按能力拆开降级、别硬塞给做不了的库**：光路/材质/运镜→mplot3d 或 Manim ThreeDScene，刚体/流体→pymunk 或 Manim 手绘帧（PyVista 做不了动力学仿真），晶格/分子构型/拓扑→trimesh 或 PyVista 建网格导 glb/PNG）。过闸后**两种出口优先前者**：glb + model-viewer（导出带材质 glb → base64 内联单文件 HTML，读者自己转、断网可开）> mp4/gif 录像（观众只能被动看，仅运镜叙事时用）。**glb 别绑死在 Blender 上**：有 Blender 用 `export_scene.gltf`（PBR 材质完整）；**没有也能出**——trimesh 纯 Python 造 glb（几何较简陋），所以「没装 Blender」≠「做不了可交互 3D」，不要直接跳到录像或静态图。两条硬规则：上了 E 层不等于只用 Blender；凡上 3D 必配 2D 备选图。细节见 references/3d-animation.md §三-E 与 §3-E.2。
+**3D 启用门槛**：仅当空间结构本身承载信息（旋转→振荡、螺旋、场、曲面、轨道）时启用；2D 能讲清的不上 3D。
 
-**分镜规范**：先写 storyboard（镜号/画面/旁白/时长/动作），旁白时长按 ~4 字/秒估算；分镜定稿后才写 Scene 代码。
+**3D 优先档**：带空间维度的知识点**默认产出 3D**（结构/旋转/轨道/场/曲面/机构/光路/拓扑/晶格/分子构型），交互优先（glb 可拖拽 > 视频），不依赖用户点名。判定问句：把 3D 换成 2D 会不会丢掉「转一下才能看见」的信息——会就上，不会就老实做 2D。
 
-**门控 🛑 STOP**：可视化产物未通过真实运行自检（文件存在、可播放、中文显示正常）不得进入 Phase 5，必须降级并注明。
+**2D 备选图强制**：凡选 3D，必须同时产出一张同概念的 2D 备选图（最直白的那个视角），用于降级、离线阅读与快速浏览——降级要真·就绪，不能临时补。
+
+**成本档**：mplot3d + GIF（秒级、零依赖）< PyVista（GPU，秒~十秒级）< Manim（6~30 秒/件）< Blender（分钟级、需本机应用）；vpython / Three.js / model-viewer 需浏览器，内联后可离线。同等讲解效果下选成本最低的一档。
+
+### Phase 4.1 3D 与 Blender 调用决策清单
+
+过闸顺序从左到右，任一不通过就走它的「否则」分支。**不要因为本机装了 Blender 就到处用**——E 层是最高成本档，不是默认档。
+
+**① 空间维度闸**：判定问句同上；否 → 概念定义 / 数据分布 / 流程时间线 / 体系 DAG 老实做 2D。
+
+**② 反向门控**：公式推导 → Manim（讲到哪画到哪）；数据分布 → matplotlib / plotly；参数探索 → 交互 HTML。这类不上 3D。
+
+**③ 依赖探测**（四个都要探，别只探一个）：`blender.exe` 走 PATH → 常见目录（`Program Files/Blender Foundation/*`）→ 注册表，Windows 上它通常不在 PATH；`trimesh` / `pyvista` / `manim` 走 `import` 且必须**跨解释器**扫，单解释器会误判「没装」。**探测结论 = 环境现状而非能力上限**：三者都是 pip 包，允许先装再用（隔离 venv 优先）；只有 Blender 是桌面应用、装不了才真没有。确实都用不了才降 mplot3d + GIF 或交互 HTML，并在交付物注明降级原因。
+
+**④ 质感门槛**：场 / 曲面 / 体数据 → PyVista（更快、更科学、深度排序正确）；只有光路 / 机构 / 晶格 / 流体 / 拓扑 / 分子构型这类需要 Cycles 光追、Mantaflow 流体、刚体约束、glTF 导出的才上 E 层 Blender。**Blender 不在本机时按能力拆开降级，别硬塞给做不了的库**：光路/材质/运镜 → mplot3d 或 Manim ThreeDScene；刚体/流体/烟雾 → pymunk 或 Manim 手绘帧（PyVista 做不了动力学仿真）；晶格/分子构型/拓扑 → trimesh 或 PyVista 建网格导 glb/PNG。
+
+**过闸后的两种出口**，优先上面那条：
+
+1. **glb + model-viewer**（默认首选）：导出带材质 glb → 与渲染库一起 base64 内联成单文件 HTML，读者自己转着看，断网可开。**glb 有两个来源，别绑死在 Blender 上**：有 Blender 用 `export_scene.gltf`（PBR 材质完整）；没有也能出——trimesh 纯 Python 造 glb（几何较简陋、无材质）。所以「没装 Blender」不等于「做不了可交互 3D」。
+2. **mp4 / gif 录像**：只在确实需要运镜叙事时用——观众只能被动看。
+
+**两条硬规则**：上了 E 层不等于只用 Blender（场与曲面归 PyVista，公式推导归 Manim）；凡上 3D 必配 2D 备选图。
 
 ### Phase 5 交付
-**双文档交付**（v1.1.3 起；**v1.1.4 起文件命名强制中文**，禁止拼音/英文文件名；产物与 md 同目录、相对路径引用）：
-1. **主卡** `[主题]—通识可视化学习卡.md`：固定骨架（本质/拆解/体系/通俗/边界/可视化/路径/自检/来源）。深度=速览时裁剪为四节。
-2. **通俗版** `[主题]—通俗版.md`：一句话说人话 / 解决什么麻烦 / 生活比方×2（各带「哪里不准」）/ 一张图看懂（复用主卡）/ 3 个自问自答。硬规则：共用事实不二次创作、术语翻译（元词汇禁用）、篇幅 ≤ 主卡 40%。
-深度=速览仅交付通俗版；精通/输出档交付双文档；输出档另补讲解附加物（分镜表 / 类比库 / 预设追问 Q&A）。**门控 🔴 CHECKPOINT**：质量约束逐条自检 + 通俗版三硬规则核查。
+统一骨架：一句话本质 → 第一性原理拆解 → 体系坐标 → 通俗理解 → 边界与反例 → 可视化 → 学习路径 → 自检问题 → 参考来源。深度=精通/输出时另交通俗版（≤ 主卡 40%）。文件命名强制「主题—用途」，主题中的 `/:*?"<>|` 替换为「－」。
 
-## 3. 可视化工具链
+## 3. 工程脚本
 
-### 3.1 降级决策树
+### 3.1 package.py（打包与版本同步）
 
-```
-依赖画像（跨解释器扫描，v1.5.1 起）──有 manim──► Manim 分镜渲染（-ql 样片 → -qm/-qh 交付，验证 mp4 >10KB 可播放）
-    │无 / 渲染失败
-    ├─ 过程/演化类 ──► matplotlib 帧序列 → ffmpeg MP4（循环展示才用 GIF）
-    ├─ 几何/结构类 ──► 代码生成 SVG
-    └─ 数据类 ──► matplotlib PNG / plotly HTML
-任何一级失败：降级 + 在交付物标注「本应动画呈现，已降级为 X」
+```bash
+python scripts/package.py                  # 按当前 VERSION 打包
+python scripts/package.py --bump patch     # 递增 patch 位并同步三份手册
+python scripts/package.py --bump minor --note "变更一句话"
 ```
 
-### 3.2 已知工程坑（模板中已内置对策）
+**原子递增（v1.5.9 起）**：先 `preflight_manuals()` 预检三份手册的锚点，任何一项不可定位就整体失败、**磁盘零改动**；预检通过才写手册，`VERSION` 最后落盘。
 
-| 坑 | 对策 |
-|---|---|
-| matplotlib 中文乱码（Windows） | 绘图前设 `font.family`（Microsoft YaHei/SimHei）+ `axes.unicode_minus: False` |
-| mplot3d 深度排序伪影 | 辅助元素 alpha≤0.6 淡化 + 主线加粗（无法根治，只能缓解） |
-| GIF 相机环绕首尾跳变 | 方位角匀速转满 360°（首尾帧相机位置重合 → 无缝循环） |
-| GIF 体积失控 | dpi 85–95、60 帧、fps 16–20，目标 ≤2 MB（base64 内嵌后 ×1.33） |
-| Three.js CDN 加载失败 | `typeof THREE === 'undefined'` 检测 → 显示降级文案并指向静态 GIF |
-| Manim 系统依赖（cairo/pango/ffmpeg） | 安装失败即走降级链，不阻塞交付 |
-| 自测 HTML 题目/选项含 `<` `&` 破版式或 `<img onerror>` 注入 | 模板内置 `esc()` 转义所有动态插值（v1.3.0 实测：注入不执行、判分不回归）；生成题目时避免数据含字面 `</script>`（会截断 HTML 解析层，转义不可防，必要时写 `<\/script>`） |
-| 单解释器依赖探测误判（PATH 上的 python 干净、manim 在别的 venv） | 跨解释器扫描（`py -0p` + venv/conda 目录）落成环境画像，按绝对路径调用；不要用「`import` 失败 = 本机没装」下结论 |
-| LaTeX 缺失导致 `MathTex`/`Tex` 渲染失败 | 探测 `latex` + `dvisvgm`；缺失时把 MiKTeX bin 前置到 PATH，或降级 `Text` + Unicode 数学符号 / matplotlib mathtext 渲 PNG 后 `ImageMobject` |
-| libx264 要求宽高均为偶数（360×225 直接整条失败） | `-vf "scale=trunc(iw/2)*2:trunc(ih/2)*2"`；`figsize`/`dpi` 也尽量凑偶数 |
-| manim 自带音频依赖 SoX（缺装时渲染警告） | 不依赖它：配音走 edge-tts 出 mp3/srt + ffmpeg `-c:v copy -c:a aac -shortest` 合体 |
-| PyVista `open_movie` 需 imageio/av 后端（实测有环境两者都没装） | 退化为逐帧 `screenshot` + ffmpeg 合成 MP4；透明场景务必 `enable_depth_peeling` |
-| plotly 静态导出需 kaleido | 缺失时改出 HTML（浏览器端渲染不受影响）或降级 matplotlib |
-| CDN 依赖导致离线/内网白屏 | 离线自足档：库内联进 HTML 或落本地 `assets/`（three 589 KB / model-viewer 913 KB / echarts 1005 KB，内联可接受） |
-| 交互产物白屏 / 死控件却「看起来正常」 | SELFTEST 约定 + `scripts/selftest_web.py` 像素级断言（非空 + 交互改变图形 + WebGL 可渲染）；模板 references/templates/selftest-web-template.html |
-| 用约束对齐朝向：删掉 `TRACK_TO` 的 target 不报错，物体只是**静默保持原朝向** | 约束是延迟求值，别拿它做几何对齐；用 `mathutils.Vector(d).to_track_quat('Z', 'Y')` 显式算朝向（v1.5.4 实测踩坑） |
-| glTF 只导出网格：曲线对象（`CURVE`）不转 mesh 会**静默丢几何** | 导出前 `bpy.ops.object.convert(target='MESH')`；`model-viewer` 的 `modelIsVisible` 在 headless 下可能恒为 false → 判 `skip`，用 `mv.toDataURL()` 长度做像素断言 |
-| 误以为「pip 里没有 bpy」＝ 本机没有 Blender | `bpy` 是 Blender **自带**模块：装了应用就用 `blender -b --factory-startup -P`，不需要 330MB wheel。探测要查注册表 Uninstall 键 + `Program Files\Blender Foundation\*`——**`blender.exe` 通常不在 PATH** |
-| 用 `enum_items` 判断 Blender 引擎可用性 → 漏报 CYCLES | 该枚举是动态的（实测只返回 `['BLENDER_EEVEE']`，而 `'CYCLES'` 实际可赋值、可渲染）；判断方式是**赋值 + try**。EEVEE 无头失败时改 `engine='CYCLES'` + `cycles.device='CPU'` |
+> 历史缺陷：旧实现先写 VERSION 再同步手册。同步失败会留下「VERSION 已递增、手册没更新」的半成品，重跑还会叠加版本号。真机复现证据：技术手册版本史出现 `1.5.11 → 1.5.9` 断档（缺 1.5.10）。
 
-### 3.3 3D 五层选型
+同步范围：`README.md` / `USER_GUIDE.md` 的「> 当前版本：」锚点行、`TECHNICAL.md` §7 版本史、`test-prompts.json` 的 version 字段。
 
-| 层 | 方案 | 依赖 | 产物 | 适用 |
-|---|---|---|---|---|
-| A | matplotlib mplot3d → GIF | numpy+matplotlib | .gif | 零依赖兜底（任何环境可用） |
-| B | PyVista | pip | .mp4/.png/交互 .html | 质量主力：场/曲面/体渲染，深度排序正确；质量档 `ssaa` + `enable_depth_peeling`（透明体必开） |
-| C | vpython | pip | 自包含 .html | 教学仿真：轨道/波/刚体，浏览器可交互 |
-| D | Three.js r128（CDN） | 浏览器 | 内联 script | 卡内可拖拽探索（查看时需联网） |
-| E | Blender 应用无头渲染（`blender -b --factory-startup -P`） | 本机装 Blender 应用（**无需 pip install bpy**） | PNG 序列 → ffmpeg → .mp4；或 `export_scene.gltf` → glb → 单文件可交互 HTML | 电影级质感/材质/运镜（实测 EEVEE ~0.16 s/帧 @320×180）；glb 带材质，可交互出口见 3d-animation.md §3-E.2 |
-| F | Manim `ThreeDScene` | manim | .mp4 | 已装 Manim 时的 3D |
-| G | plotly 3D | plotly | 自包含 .html | 数据曲面/散点探索 |
+### 3.2 regression.py（全量回归）
 
-### 3.4 扩展工具箱（references/extended-viz.md）
+```bash
+python scripts/regression.py      # 全量：代码块真机执行 + headless 断言 + 文档一致性
+```
 
-按「填补空白」准入，模板含最小可运行示例 + 降级链：
+覆盖范围：references 五份文档的代码块逐一真机执行（bpy 代码块用 `blender -b --factory-startup -P` 真机跑）、quiz / 拖拽 / 约束拖拽 / selftest 四类模板的 headless 断言、双文档约束（命名 / 篇幅 / 禁用词）、Phase 0 结构断言、文档交叉一致性（黑名单条数 / 选型矩阵行数 / 目录树 / 五处版本号）、package.py 边界用例。
 
-- **ECharts**（CDN）：桑基/和弦/热力日历/关系图，中文最友好 → 降级 matplotlib
-- **D3.js**（CDN）：完全自定义交互（力导向图等）→ 降级 ECharts
-- **p5.js**（CDN）：粒子流场等过程动画 → 降级 streamplot 静态图
-- **pyvis / graphviz**（pip）：Phase 2 DAG 自动布局 → 降级 Mermaid
-- **schemdraw**（pip）：电路/原理示意图 → 降级 SVG 手绘
-- **GeoGebra / Desmos**（iframe）：函数/几何调参探索零代码 → 降级自写 widget
-- **Motion Canvas**（Node）：时间轴级程序化动画 → 降级 Manim
+### 3.3 selftest_web.py（交互 / 3D 断言器）
 
-表达方式层（跨工具）：滚动叙事（scrollytelling，适配 Phase 1 推理链）、小倍数图（参数族）、粒子流场、物理仿真驱动、reveal.js 交互幻灯、rough.js 手绘风。
+```bash
+python scripts/selftest_web.py                 # 自检内置模板
+python scripts/selftest_web.py 产物.html        # 断言具体产物
+python scripts/selftest_web.py 产物.html --json # 机器可读
+```
 
-### 3.5 交互组件交付策略
+约定：页面暴露 `window.__SELFTEST__() → {pass, checks}`；`#selftest` 打开时把结果写入 DOM。退出码 0=通过 / 1=断言失败 / 2=环境问题。
 
-1. 宿主有内联 HTML 能力（如 WorkBuddy widget）→ 原始 HTML 片段交付；
-2. 否则 → 独立 `.html` 文件落盘 + 回复中给路径。
-两种路径最终产物等价，均为「滑块驱动 canvas/SVG 重绘」的自包含组件。
-3. **自测门控（v1.5.2 起）**：两条路径的产物都必须能被 `python scripts/selftest_web.py <产物>` 断言通过（画布非空 + 交互改变图形 + WebGL 可渲染，退出码 0），并满足无障碍底线（viewport / `:focus-visible` / `prefers-reduced-motion`）；约定见 extended-viz-2.md §6，模板见 references/templates/selftest-web-template.html。
-4. **离线自足**：库内联进 HTML 或落本地 `assets/` 相对引用；做不到时显式标注「查看需联网」，不得默认用户在线。
+### 3.4 make_readme_figures.py（文档配图）
 
-### 3.6 扩展工具箱第二批次（references/extended-viz-2.md，v1.2.0，全部真机实测）
+```bash
+python scripts/make_readme_figures.py   # 生成 docs/images/01~04 概念图
+```
 
-- **Mermaid**（文本即图）：体系 DAG/流程/状态机 Markdown 原生渲染，零脚本零产物 → 降级 graphviz 出 PNG
-- **pymunk**（pip，2D 刚体物理）：真实引擎计算，实测单摆 θ₀=60° 周期 +7.37%（理论 1+θ²/16=+6.85% 吻合）→ 降级 matplotlib 手绘帧
-- **edge-tts**（pip，中文语音）：免费 TTS 出讲解 mp3（实测 203KB/40s，沙箱可达）→ 降级纯文字通俗版
-- **交互自测 HTML + genanki**（零依赖/pip）：自检问题 → 判分组件（实测 headless 5/5）+ Anki .apkg 记忆卡 → 降级 md 内自检问题
-- **trimesh → glb → model-viewer**（pip/CDN）：代码造 3D 模型，glb **base64 内嵌**单 HTML 双击即用（实测截图渲染通过）→ 降级 mp4/GIF（3D 五层）
+依赖 matplotlib 与中文字体（微软雅黑 / SimHei）。图 05、06 是真实产出示例，直接取自学习包产物。
 
-第二批次实测坑（9 条，详见 extended-viz-2.md 各节坑表）：pymunk 只 add joint 不 add body = 模拟静默不发生（必须 `space.add(body, joint)`，测周期函数加 `len(zeros)<2` 抛错守卫）、genanki Deck/Model ID 一经发布必须固定（随机 ID 会在 Anki 重复建组）、PillowWriter 不支持 with 上下文、Unicode 下标 U+2080 缺字形（改 mathtext）、trimesh 5.x 无 torus_knot、glb 导出+设色需 scipy、model-viewer file:// CORS 拦 glb（必须 base64 内嵌或 http 服务）、headless WebGL 需 --enable-unsafe-swiftshader、Chrome 截图对工作区目录写文件被拒（指向 %TEMP%）。
+## 4. 质量门控
 
-## 4. 平台适配层
+- **可视化 STOP**：产物未通过真实运行自检（存在、可播放、中文正常）不得进入 Phase 5，必须降级并注明。
+- **交互 / 3D 强制断言**：必须暴露 `__SELFTEST__` 并通过 `selftest_web.py`，退出码 0 才放行。
+- **无障碍底线**：`<meta name="viewport">`、`:focus-visible`、动画类带 `prefers-reduced-motion`。
+- **反例黑名单**：内置 **8 条**反模式（编造数据、伪产物、循环定义、单点孤立、为炫技上 3D、把类比当定义、无依赖硬上高阶工具、把速览撑成完整流程），每轮对照。
 
-SKILL.md 通过「能力占位符 + 映射表」实现平台无关。四个占位符：
+## 5. 实测坑表
 
-| 占位符 | 含义 | 缺失时降级 |
+| 坑 | 现象 | 处置 |
 |---|---|---|
-| 提问澄清 | 结构化向用户提问 | 用默认假设继续 + 交付物标注 |
-| 执行命令 | 运行渲染脚本 | 产出可复制脚本请用户运行 |
-| 联网核验 | WebSearch/WebFetch 交叉验证 | 标注「待核验」+ 验证路径 |
-| 交互组件 | 内联 HTML 交付 | 独立 HTML 文件 |
+| 帧序列合成 MP4 | libx264 要求宽高偶数，奇数尺寸整条失败 | `-vf scale=trunc(iw/2)*2:trunc(ih/2)*2` |
+| 中文控制台 | GBK 下打印中文说明 `UnicodeEncodeError`，常崩在汇总前 | 脚本 `reconfigure(encoding="utf-8")` + 子进程 `PYTHONIOENCODING` |
+| LaTeX 缺失 | `MathTex` 直接失败，无产物 | 探测 `latex` / `dvisvgm`，缺失降级纯文本公式 |
+| 配音依赖 | manim-voiceover 缺后端会交互式询问并挂死；SoX 缺装 | 改用 edge-tts 出 mp3 + srt，再 ffmpeg 合体 |
+| 体渲染透明 | 深度伪影导致前后遮挡错误 | PyVista 开 `enable_depth_peeling`（而非只淡化辅助元素） |
+| 3D 导出 | 曲线对象不在 glTF 导出范围，静默丢几何 | 先 `convert(target="MESH")` 再 `export_scene.gltf` |
+| 圆柱朝向 | 直接给 rotation_euler 会歪 | `to_track_quat("Z", "Y")` 对齐方向向量 |
+| 3D 质量 | 默认渲染发糊 | PyVista 开 `ssaa`，Blender 先小分辨率出样片再抬规格 |
+| 体渲染 | 多维标量未 `ravel` 触发数量校验失败 | 显式 `ravel(order="F")` |
+| plotly 静态导出 | `write_image` 缺 `kaleido` 直接报错；新版本还需 `kaleido<1` 才稳 | 先探测 `import kaleido`，缺失则改 `write_html` 或 matplotlib 出图 |
+| edge-tts 合成 | WebSocket 403（`Sec-MS-GEC` 是带时间戳的 DRM token） | 先查系统时钟是否同步、再升级 edge-tts，最后降级为本地 TTS（CapsWriter / PotPlayer） |
+| 交互自测 | 白屏 / 死控件看起来像正常页面 | SELFTEST 断言 + 空白画布反面用例 |
+| 约束拖拽 | 只加 joint 不加 body 会静默不动 | `space.add(body, joint)` + 周期守卫 |
+| 离线 3D | `<model-viewer src="./x.glb">` 双击被 CORS 拦 | glb 内联 data URI（单文件）或起 http 服务 |
+| 无头 WebGL | 部分 Chrome 版本拿不到 context | 加 `--enable-unsafe-swiftshader`；拿不到判 skip 而非 fail |
+| 包管理器 | winget 下载 GitHub release 报 `InternetOpenUrl() failed` | 直连下载 zip 解压，或走本机代理 |
+| GitHub API | `gh` 直连超时 | 设置 `HTTPS_PROXY`；SSH 推送走 22 端口不受影响 |
 
-原则：**降级不跳过**——任何能力缺失都用等效手段完成该 Phase 目标，绝不静默省略可视化环节。
+## 6. 发布流程
 
-## 5. 质量体系
+```bash
+python scripts/regression.py                                   # 1. 全绿（FAIL 必须为 0）
+python scripts/make_readme_figures.py                          # 2. 若改了图，重新生成
+python scripts/package.py --bump patch --note "本次变更一句话"   # 3. 原子递增 + 打包
+git add -A && git commit -m "vX.Y.Z: ..." && git push          # 4. 推源码
+gh release create vX.Y.Z dist/<zip> README.md USER_GUIDE.md TECHNICAL.md --notes-file <notes>
+```
 
-### 5.1 质量约束（五条，SKILL.md 中声明为不可妥协）
-
-专业严谨（事实核验）/ 通俗易懂（类比先行）/ 全面准确（含边界反例）/ 可视化优先（真实运行）/ 体系化（依赖图坐标）。
-
-### 5.2 反例黑名单
-
-SKILL.md 内置 **8 条**反模式→替代做法对照（编造数据 / 交付未真实运行的伪产物 / 循环定义 / 单点孤立讲解 / 为炫技上 3D / 把类比当定义 / 环境无依赖仍硬上高阶工具干等 / 把速览需求撑成完整五阶段流程），要求智能体每轮交付前对照。
-
-### 5.3 门控机制
-
-3 处显式门控（Phase 0 CHECKPOINT / Phase 4 STOP / Phase 5 CHECKPOINT），STOP 级别为硬阻断：可视化自检不过，禁止交付。
-
-### 5.4 质量评分记录
-
-本技能经鲁班 Quick 模式两轮优化：
-
-**第一轮（2026-10-05，通用版前）：基线 76.0 → 83.8**
-
-| 轮次 | 维度 | 改动 | Δ |
-|---|---|---|---|
-| R1 | 检查点 0→8 | 3 处门控落位 | +5.4 |
-| R2 | 具体性 8→8.5 | 软化词硬化（工具必选、交付方式明确） | +0.9 |
-| R3 | 反例黑名单 5→7.5 | 6 条反模式表 | +1.5 |
-
-**第二轮（2026-10-05，通用版 v1.1.1）：基线 86.1 → 88.45**
-
-| 轮次 | 维度 | 改动 | Δ |
-|---|---|---|---|
-| R1 | 具体性 8.5→9 | Phase 执行顺序硬化（P4 必须在 P1–3 后）+ 渲染限时 3 分钟条款 | +0.85 |
-| R2 | 黑名单 7.5→8.5 | 新增 2 条反模式（硬上高阶工具干等 / 速览被撑成全流程） | +0.6 |
-| R3 | 语义 8→8.5 | 设计原则与质量约束去重（回归「为什么」定位）；dim3 簇观察 +0.5 | +0.9 |
-
-**第三轮（2026-10-06，v1.2.2）：基线 88.45 → 94.1（ROI 网关触发，跳过优化循环）**
-
-本轮首次以**真机证据**（而非 dry_run 推演）计 dim8：独立评审员复跑 `scripts/regression.py` 得 25 PASS / 2 SKIP / 0 FAIL（1m49s）、抽查审计台账 7/7 吻合、端到端产物 12/12（mp3 MPEG 帧 / glb glTF 魔数 / apkg zip 三处魔数核验）。
-
-| 维度 | 得分 | 关键依据 |
-|---|---|---|
-| dim1/4/7a/10 | 10 | 确定性扫描：frontmatter 规范、STOP=1、标题无跳跃、Quick 门控 |
-| dim2 / dim3 | 9 | 五 Phase 输入产出齐备、降级链与超时判定完整 |
-| dim5 | 9.18 | 软化词 0 处；硬参数密集（zh-CN-XiaoxiaoNeural、≤40%、model-viewer@4.1.0） |
-| dim6 | 10 | 引用计数修正后满分 |
-| dim7b | 8.67 | 无 AI 腔；跨文件重申小扣 |
-| dim8 | 9.65 | 8a=10 / 8b=9 / 8c=10，真机证据计分 |
-| dim9 | 9 | 8 条反模式具体且配替代做法 |
-
-本轮唯一实质改动：修正 SKILL.md 坑表计数（7 条→9 条）；另修复 WorkBuddy 部署副本 references 不同步（补齐 extended-viz-2.md / audit-checklist.md / templates）。**ROI 判定：94.1 ≥ 85 且最低维 8.67 ≥ 7 → 按规则跳过优化循环。**
-
-## 6. 二次开发指南
-
-1. **改触发词**：编辑 frontmatter `description`，跑 `test-prompts.json` 的用例验证命中/误触发。
-2. **加可视化手段**：在 Phase 4 选型矩阵加行 + 对应 references 加模板 + 降级链写明。模板必须含「最小可运行示例 + 自检要点 + 已知坑」三要素。
-3. **加新平台适配**：在「平台适配」表加一列，占位符不变。
-4. **改学习卡骨架**：Phase 5 的骨架与 Phase 1–4 产出一一对应，改动需同步门控自检项。
-5. **验证方式**：拿 `test-prompts.json` 中 should_trigger 用例在目标平台实测端到端产出（重点验证：可视化真实渲染、降级标注、中文显示）。
+发布前对照 [references/audit-checklist.md](references/audit-checklist.md) 兜底校验。
 
 ## 7. 版本
 
-- v1.5.8（2026-10-07）：v1.5.8：第六批三视角对抗性审查（R7-1~R7-6）——修复 Blender 决策清单三处判定缺陷（glb 通道未含 trimesh、把探测不到当装不了、降级把能力塞给做不了的库），新增 viz-Blender决策清单 回归断言并做反永真验证
-- v1.5.7（2026-10-07）：v1.5.7：SKILL.md/TECHNICAL.md 新增「3D 与 Blender 调用决策清单」四道闸（空间维度→反向门控→依赖探测→质感门槛）+ 两种出口优先级（glb 可拖拽 > mp4 录像）+ 两条硬规则，固化 Phase 4 选型判定
-- v1.5.6（2026-10-07）：新增「约束求解」型交互模板（连杆链：拖末端，关节按定长约束迭代松弛，含边长守恒断言）；3D 启用门槛升级为双向门控——带空间维度的知识点默认倾斜向 3D（交互优先），无空间维度仍做 2D
-- v1.5.5（2026-10-07）：新增「拖对象」型交互模板（单位圆拖拽：指针+键盘双通道、读数与数学一致性断言）；交互组件明确三类（拖参数/拖对象/拖视角）；回归新增文档与真机两条断言
-- v1.5.4（2026-10-07）：Blender E 层适用/不适用对照表；打通 Blender→glb→model-viewer 单文件可交互 3D（含模板与真机断言）；新增约束静默失败与 glTF 丢几何两条坑
-- v1.5.3（2026-10-07）：Blender E 层从跳过改为真机执行：应用探测（PATH/常见目录/注册表）、engine 赋值验证（enum_items 会漏报 CYCLES）、无头 EEVEE 模板由回归真跑；审计台账第五批续
-- v1.5.2（2026-10-07）：交互产物自测门控：SELFTEST 约定 + selftest_web.py 断言器 + 无障碍底线 + 3D 强制 2D 备选图与成本档；audit-checklist 第五批台账
-- v1.5.1（2026-10-07）：可视化链路加固：跨解释器依赖画像、LaTeX/MathTex 修复、2D 降级档升级为 ffmpeg MP4、edge-tts+ffmpeg 配音合体、PyVista 质量档与离线自足档
-- v1.5.0（2026-10-07）：第四批对抗性审查（R5-1~R5-13）：修复 package.py --bump patch 静默不递增（会打同名 zip 覆盖旧产物）与 --note/--bump 缺值 IndexError；TECHNICAL 目录树、反模式计数（6→8）、选型矩阵（10→13 行）、第三轮评分记录四处文档漂移更正；Phase 0 新增提问能力约束（一次≤4 问，可合并或分批，多选须带自动兜底项）与第二批次产物中文命名约定；regression.py 新增 18 项断言，全量 43 PASS / 2 SKIP / 0 FAIL
-- v1.4.0（2026-10-06）：Phase 0 升级结构化选项确认：新增主题覆盖范围（单点/带前置/完整体系）与可视化形式多选（动画/交互图/3D/配音/记忆卡）两个维度，改为禁止开放式追问、缺省策略兜底、组合规则防维度冲突；README 指令速查表补说法、test-prompts 补 typical-7
-- v1.3.0（2026-10-06）：第三批对抗性审查（R4-1~R4-8）：quiz 模板 esc 转义防注入（双 Case 真机对照）；package.py 边界校验 + 手册版本号自动递增（README/TECHNICAL/test-prompts 三处联动）；TECHNICAL §3.5/3.6 顺序修正 + 坑表补全 9 条；README 过度承诺措辞修正；SKILL.md 主题名净化规则
-- v1.2.2（2026-10-06）：鲁班第三轮评审（基线 94.1，ROI 网关触发跳过优化循环）——修正 SKILL.md L195 坑表计数（7 条→9 条：pymunk 4 + genanki 1 + glb 4，dim6 恢复满分）；WorkBuddy 部署副本 references 同步（补齐 extended-viz-2.md / audit-checklist.md / templates，消除 5 处引用不可达与旧版无 ravel 修复问题）。回归 25 PASS / 2 SKIP / 0 FAIL（独立子 agent 复跑复核）。
-- v1.2.1（2026-10-06）：三视角对抗性审查修复（台账见 references/audit-checklist.md，13 项）——pymunk 模板静默不模拟 bug（space.add 补 body + 测周期守卫）、PyVista 多维标量 ravel、vpython/setuptools≥81 坑、graphviz dot.exe 坑、quiz 模板入库 references/templates/、Manim 版本断言实测校正（0.21.0@3.13.14）、触发词/测试用例扩充（12 条）、章节序修正；回归脚本 scripts/regression.py（25 PASS/2 SKIP/0 FAIL）；新增 VERSION 单一来源 + scripts/package.py 自动递增打包。
-- v1.2.0（2026-10-06）：扩展工具箱第二批次——新增 references/extended-viz-2.md（Mermaid / pymunk / edge-tts / 交互自测 HTML + genanki / trimesh→model-viewer 3D 单文件交付），**五类模板全部真机实测**（pymunk 单摆出 GIF+周期数据、edge-tts 出 mp3、genanki 出 apkg、自测 HTML headless 判分 5/5、model-viewer 截图渲染验证），7 条实测坑回填；Phase 4 选型矩阵扩至 13 行。
-- v1.1.4（2026-10-06）：双文档文件命名强制中文——主卡 `[主题]—通识可视化学习卡.md`、通俗版 `[主题]—通俗版.md`（禁止拼音/英文文件名）；可视化产物与 md 同目录、相对路径引用。经「电流」实测交付验证（`电流—通识可视化学习卡.md` / `电流—通俗版.md`）。
-- v1.1.3（2026-10-06）：Phase 5 升级双文档交付——主卡 + 通俗版（固定骨架 + 三条防漂移硬规则：共用事实/术语翻译/篇幅≤40%）；速览档仅交付通俗版。
-- v1.1.2（2026-10-05）：鲁班第二轮优化（86.1→88.45）：执行顺序硬化、渲染限时 3 分钟条款、反例黑名单扩至 8 条、设计原则去重。
-- v1.1.0（2026-10-05）：扩展可视化工具箱——3D 五层选型（+PyVista/vpython/Blender bpy）、新增 references/extended-viz.md（ECharts/D3/p5.js/pyvis/schemdraw/Motion Canvas/GeoGebra/Desmos + 表达方式层）、Phase 4 选型矩阵扩至 10 行。
-- v1.0.0（2026-10-05）：首个开源版本。通用化改造（平台适配层），含用户手册/技术手册/触发测试用例。
+- v1.5.9（2026-10-26）：重写三份文档（README 门面 + USER_GUIDE 用户手册 + TECHNICAL 技术手册），新增 docs/images 概念图与生成脚本；package.py 改为原子递增并支持三份手册同步（修复「VERSION 已递增但手册未更新」的半成品缺陷）；新增三处回归断言（文档存在性 / 配图存在性 / 五处版本号一致）
+- v1.5.8（2026-10-07）：第六批三视角对抗性审查（R7-1~R7-6）——修复 Blender 决策清单三处判定缺陷（glb 通道未含 trimesh、把探测不到当装不了、降级把能力塞给做不了的库），新增 viz-Blender决策清单 回归断言并做反永真验证
+- v1.5.7（2026-10-07）：SKILL.md / TECHNICAL.md 新增「3D 与 Blender 调用决策清单」四道闸 + 两种出口优先级 + 两条硬规则
+- v1.5.6（2026-10-07）：3D 优先档（双向门控），带空间维度的知识点默认产出 3D
+- v1.5.5（2026-10-07）：交互三分类（拖参数 / 拖对象 / 拖视角）与 constraint-drag 模板
+- v1.5.4（2026-10-07）：Blender E 层真机验证 + glb→model-viewer 单文件出口
+- v1.5.3（2026-10-07）：Blender 从 SKIP 改为真机执行；Cycles 判定改为赋值 + try
+- v1.5.2（2026-10-07）：交互产物 SELFTEST 强制 + 2D 备选图强制 + 无障碍底线
+- v1.5.1（2026-10-07）：跨解释器依赖画像 + LaTeX 探测 + MP4 降级档
+- v1.5.0（2026-10-07）：Phase 0 结构化选项上限约束与分批策略
+- v1.4.0（2026-10-06）：Phase 0 五项结构化确认；第二批次产物中文命名
+- v1.3.0（2026-10-06）：第三批对抗性审查（R4-1~R4-5），package.py 边界校验
+- v1.2.2（2026-10-06）：第二批次扩展工具箱（Mermaid / pymunk / edge-tts / 自测 / genanki）
+- v1.2.1（2026-10-06）：首轮三视角审查修复（13 项）
+- v1.2.0（2026-10-06）：extended-viz-2.md 与五类模板真机实测
+- v1.1.0（2026-10-05）：3D 五层选型 + extended-viz.md
+- v1.0.0（2026-10-05）：五阶段工作流骨架
