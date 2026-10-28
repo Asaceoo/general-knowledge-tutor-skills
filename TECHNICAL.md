@@ -25,7 +25,7 @@ general-knowledge-tutor/
 │   ├── extended-viz.md            # 扩展工具箱（ECharts/D3/p5.js/pyvis/schemdraw/GeoGebra/Desmos）
 │   ├── extended-viz-2.md          # 第二批次（Mermaid/pymunk/edge-tts/自测 HTML+genanki/trimesh→model-viewer）
 │   ├── audit-checklist.md         # 对抗性审查台账：改任何内容后必须过这张清单
-│   ├── chart-catalog.md           # 图表目录：42 种图表 + 按问题类型选图 + 反模式 + 扩展路线
+│   ├── chart-catalog.md           # 图表目录：52 种图表 + 按问题类型选图 + 反模式 + 扩展路线
 │   └── templates/
 │       ├── quiz-template.html             # 自测 HTML（esc 转义防注入 + #selftest 判分模式）
 │       ├── selftest-web-template.html     # SELFTEST 约定（非空/交互/WebGL 断言 + a11y）
@@ -37,7 +37,8 @@ general-knowledge-tutor/
 │   ├── regression.py              # 全量回归：代码块真机执行 + headless 断言 + 文档一致性
 │   ├── selftest_web.py            # 交互/3D 产物断言器（Chrome headless，退出码 0/1/2）
 │   ├── make_readme_figures.py     # 生成 README 概念图（matplotlib，输出到 docs/images）
-│   └── chart_gallery.py           # 真实渲染 42 种图表 + 拼版（chart-catalog.md 的可执行证据）
+│   ├── chart_gallery.py           # 全部图表定义 + 注册表 + 拼版（--all 用）
+│   └── chart.py                   # 按需调用 CLI：--list / --search / <名称> --out / --all
 └── docs/images/                   # README 概念图、真实产出示例、图表画廊（打包时一并入包）
 ```
 
@@ -213,6 +214,7 @@ gh release create vX.Y.Z dist/<zip> README.md USER_GUIDE.md TECHNICAL.md --notes
 
 ## 7. 版本
 
+- v1.8.0（2026-10-29）：图表第三批扩容（42 → 52 种）+ 按需调用：新增 scripts/chart.py（--list/--search/--json/点名渲染/--all）与注册表；新增百分比堆叠/发散条/哑铃/CDF/生存曲线/控制图/时间线/流程图/决策树/标签云；补 import re 修复首启崩溃；回归阈值提到 50 并新增按需调用断言
 - v1.7.0（2026-10-29）：图表第二批扩容（25 → 42 种）：新增阶梯/置信带/迷你图/帕累托/子弹/仪表/华夫/玫瑰/云雨/联合分布/六边形分箱/QQ/森林/韦恩/弧线/日历热力/矢量场；修复子弹图文字重叠与仪表缺底轨；回归阈值提到 40
 - v1.6.0（2026-10-29）：图表类型扩容：新增 references/chart-catalog.md（25 种图表 + 按问题选图 + 反模式）与 scripts/chart_gallery.py 真机画廊；选型矩阵扩至 20 行；修复 networkx/Sankey 中文标签方框（font.sans-serif）
 - v1.5.9（2026-10-26）：重写三份文档（README 门面 + USER_GUIDE 用户手册 + TECHNICAL 技术手册），新增 docs/images 概念图与生成脚本；package.py 改为原子递增并支持三份手册同步（修复「VERSION 已递增但手册未更新」的半成品缺陷）；新增三处回归断言（文档存在性 / 配图存在性 / 五处版本号一致）

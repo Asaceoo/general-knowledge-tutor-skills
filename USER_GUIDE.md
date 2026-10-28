@@ -3,7 +3,7 @@
 > 面向**想直接用它学习的人**：怎么装、怎么问、拿到产物后怎么看、遇到问题怎么办。
 > 想了解实现原理或二次开发，请看 [技术手册](TECHNICAL.md)。
 
-> 当前版本：v1.7.0（2026-10-29）· 更新日志见 [TECHNICAL.md](TECHNICAL.md) §7
+> 当前版本：v1.8.0（2026-10-29）· 更新日志见 [TECHNICAL.md](TECHNICAL.md) §7
 
 ---
 
@@ -120,7 +120,7 @@ cp -r general-knowledge-tutor-skills ~/.claude/skills/general-knowledge-tutor   
 |---|---|
 | 看一个过程怎么演化 | Manim 动画（分镜、带旁白节奏） |
 | 看数据分布与关系 | matplotlib / plotly / ECharts 图 |
-| 想知道「该画哪种图」 | 直接问它：技能内置 42 种图表目录（见下方「图表怎么挑」） |
+| 想知道「该画哪种图」 | 直接问它：技能内置 52 种图表目录（见下方「图表怎么挑」） |
 | 看场、曲面、三维数据 | PyVista 渲染（可多视角） |
 | 想自己转着看结构 | glb + model-viewer 单文件 HTML |
 | 想拖一拖看参数变化 | 交互 HTML（滑块 / 拖点） |
@@ -128,7 +128,7 @@ cp -r general-knowledge-tutor-skills ~/.claude/skills/general-knowledge-tutor   
 
 如果主题根本没有空间维度（概念定义、数据分布、流程时间线），**不做 3D 才是对的**——硬上只会增加认知负担。
 
-### 图表怎么挑（42 种可选）
+### 图表怎么挑（52 种可选）
 
 不用记图名，说清「你想让读者看出什么」就行：
 
@@ -146,7 +146,7 @@ cp -r general-knowledge-tutor-skills ~/.claude/skills/general-knowledge-tutor   
 
 > 会回避的画法：3D 饼图、截断 y 轴、双 Y 轴、饼图超过 5 类、只画均值不画分布——这些会让人得出错误结论，技能默认不用。
 
-想看全部 42 种长什么样：打开 [README 的图表画廊](README.md) 或仓库里的 `docs/images/charts/_gallery.png`。
+想看全部 52 种：打开 [README 的图表画廊](README.md) 或 `docs/images/charts/_gallery.png`；只想要某一类，让它按名调用即可（`python scripts/chart.py --list`）。
 
 ## 8. 怎么判断 AI 没糊弄你
 

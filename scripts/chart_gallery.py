@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""图表画廊：真实渲染 24 种常用图表，作为 references/chart-catalog.md 的可执行证据。
+"""图表画廊：真实渲染全部图表，作为 references/chart-catalog.md 的可执行证据。
 
 用法：python scripts/chart_gallery.py
 输出：docs/images/charts/<类型>.png + docs/images/charts/_gallery.png（拼版）
 """
 import os
+import re
 import math
 import numpy as np
 import matplotlib
@@ -741,6 +742,189 @@ def chart_quiver():
     return save(fig, "quiver")
 
 
+# ============ 第三批（v1.8.0）============
+
+
+# 43 百分比堆叠条形
+def chart_pct_stacked():
+    fig, ax = new(5.0, 3.2)
+    cats = ["理科", "工科", "文科", "艺术"]
+    a = np.array([38, 30, 46, 22]); b = np.array([34, 42, 32, 38]); c = np.array([28, 28, 22, 40])
+    tot = a + b + c
+    left = np.zeros(len(cats))
+    for seg, color, name in [(a, BLUE, "课堂"), (b, ORANGE, "自学"), (c, GREEN, "实践")]:
+        ax.barh(cats, seg / tot * 100, left=left, color=color, label=name, height=0.55)
+        left += seg / tot * 100
+    ax.set_xlim(0, 100); ax.set_xlabel("占比 (%)", fontsize=9)
+    ax.legend(fontsize=8, frameon=False, ncol=3, loc="lower center", bbox_to_anchor=(0.5, -0.42))
+    style(ax, "百分比堆叠条形 · 构成对比", "", "")
+    return save(fig, "pct_stacked")
+
+
+# 44 发散条形（正负）
+def chart_diverging():
+    fig, ax = new(4.8, 3.4)
+    items = ["方案 A", "方案 B", "方案 C", "方案 D"]
+    v = np.array([18, -12, 27, -8])
+    colors = [GREEN if x >= 0 else ROSE for x in v]
+    ax.barh(items, v, color=colors, height=0.55)
+    ax.axvline(0, color="#0f172a", lw=1.2)
+    for i, x in enumerate(v):
+        ax.text(x + (1.2 if x >= 0 else -1.2), i, f"{x:+d}", va="center",
+                ha="left" if x >= 0 else "right", fontsize=8.5)
+    style(ax, "发散条形 · 正负贡献", "增减", "")
+    return save(fig, "diverging")
+
+
+# 45 哑铃图
+def chart_dumbbell():
+    fig, ax = new(4.8, 3.4)
+    items = ["指标 A", "指标 B", "指标 C", "指标 D"]
+    before = np.array([52, 61, 47, 70])
+    after = np.array([68, 66, 72, 74])
+    y = np.arange(len(items))
+    for i in range(len(items)):
+        ax.plot([before[i], after[i]], [y[i], y[i]], color="#cbd5e1", lw=3, zorder=1)
+    ax.scatter(before, y, s=90, color=GRAY, zorder=2, label="前测")
+    ax.scatter(after, y, s=90, color=BLUE, zorder=3, label="后测")
+    ax.set_yticks(y); ax.set_yticklabels(items)
+    ax.legend(fontsize=8, frameon=False, loc="lower right")
+    style(ax, "哑铃图 · 两点之间的变化", "得分", "")
+    return save(fig, "dumbbell")
+
+
+# 46 累积分布 CDF
+def chart_cdf():
+    fig, ax = new()
+    d1 = rng.normal(60, 9, 300); d2 = rng.normal(70, 13, 300)
+    for d, c, name in [(d1, BLUE, "A 组"), (d2, ORANGE, "B 组")]:
+        xs = np.sort(d)
+        ys = np.arange(1, len(xs) + 1) / len(xs)
+        ax.step(xs, ys, where="post", color=c, lw=2, label=name)
+    ax.legend(fontsize=8, frameon=False, loc="lower right")
+    ax.set_ylim(0, 1.02)
+    style(ax, "累积分布 CDF · 比中位数更全", "取值", "累积比例")
+    return save(fig, "cdf")
+
+
+# 47 生存曲线（Kaplan-Meier 风格）
+def chart_survival():
+    fig, ax = new()
+    t = np.array([0, 2, 4, 6, 8, 10, 12, 14, 16])
+    s = np.array([1.0, 0.94, 0.88, 0.80, 0.73, 0.66, 0.58, 0.52, 0.45])
+    ax.step(t, s, where="post", color=BLUE, lw=2.2, label="方案 A")
+    s2 = np.array([1.0, 0.90, 0.79, 0.68, 0.60, 0.50, 0.42, 0.35, 0.30])
+    ax.step(t, s2, where="post", color=ORANGE, lw=2.2, label="方案 B")
+    ax.plot(t[2::2], s[2::2], "|", color=BLUE, ms=10, mew=1.8)
+    ax.axhline(0.5, color=GRAY, ls="--", lw=1)
+    ax.legend(fontsize=8, frameon=False)
+    ax.set_ylim(0, 1.05)
+    style(ax, "生存曲线 · 保持率随时间", "时间", "未发生比例")
+    return save(fig, "survival")
+
+
+# 48 控制图
+def chart_control():
+    fig, ax = new(5.0, 3.4)
+    x = np.arange(24)
+    y = 50 + rng.normal(0, 2.2, 24)
+    y[17] = 59.5
+    mu, sd = y.mean(), y.std(ddof=1)
+    ax.plot(x, y, "o-", color=BLUE, lw=1.6, ms=5)
+    ax.axhline(mu, color="#0f172a", lw=1.2)
+    for k, c in [(3, ROSE), (2, ORANGE)]:
+        ax.axhline(mu + k * sd, color=c, ls="--", lw=1)
+        ax.axhline(mu - k * sd, color=c, ls="--", lw=1)
+    ax.scatter([17], [y[17]], s=120, facecolor="none", edgecolor=ROSE, lw=2)
+    ax.text(0.5, mu + 3 * sd + 1.2, "UCL (μ+3σ)", fontsize=7.5, color=ROSE)
+    style(ax, "控制图 · 过程是否失控", "批次", "指标")
+    return save(fig, "control")
+
+
+# 49 时间线
+def chart_timeline():
+    fig, ax = new(5.4, 2.9)
+    events = [("提出假设", 1), ("实验验证", 3.2), ("发表论文", 5.1), ("复现失败", 7.0), ("修正模型", 8.6)]
+    ax.plot([0.4, 9.6], [0, 0], color="#cbd5e1", lw=3, solid_capstyle="round")
+    for i, (name, x) in enumerate(events):
+        up = i % 2 == 0
+        ax.plot([x], [0], "o", color=BLUE if up else ORANGE, ms=11, zorder=3)
+        ax.plot([x, x], [0, 0.55 if up else -0.55], color="#94a3b8", lw=1.2)
+        ax.text(x, 0.62 if up else -0.68, name, ha="center",
+                va="bottom" if up else "top", fontsize=8.5)
+    ax.set_ylim(-1.2, 1.2); ax.set_xlim(0, 10)
+    ax.axis("off")
+    ax.set_title("时间线 · 事件顺序", fontsize=12, pad=6)
+    return save(fig, "timeline")
+
+
+# 50 流程图
+def chart_flow():
+    from matplotlib.patches import FancyBboxPatch
+    fig, ax = new(4.8, 3.6)
+    ax.set_xlim(0, 10); ax.set_ylim(0, 10); ax.axis("off")
+    steps = [("输入", 5.0, 8.6), ("预处理", 5.0, 6.4), ("模型", 5.0, 4.2), ("评估", 5.0, 2.0)]
+    for name, x, y in steps:
+        ax.add_patch(FancyBboxPatch((x - 1.7, y - 0.62), 3.4, 1.24,
+                                    boxstyle="round,pad=0.02,rounding_size=0.18",
+                                    facecolor="#eff6ff", edgecolor=BLUE, lw=1.8))
+        ax.text(x, y, name, ha="center", va="center", fontsize=9.5)
+    for i in range(len(steps) - 1):
+        y0 = steps[i][2] - 0.66; y1 = steps[i + 1][2] + 0.66
+        ax.annotate("", xy=(5.0, y1), xytext=(5.0, y0),
+                    arrowprops=dict(arrowstyle="-|>", color="#64748b", lw=1.6))
+    ax.annotate("", xy=(8.6, 4.2), xytext=(6.7, 4.2),
+                arrowprops=dict(arrowstyle="-|>", color=ROSE, lw=1.6,
+                                connectionstyle="arc3,rad=0"))
+    ax.text(8.8, 4.2, "失败重训", fontsize=7.5, color=ROSE, va="center")
+    ax.set_title("流程图 · 步骤与分支", fontsize=12, pad=6)
+    return save(fig, "flow")
+
+
+# 51 决策树
+def chart_tree():
+    from matplotlib.patches import FancyBboxPatch
+    fig, ax = new(5.2, 3.6)
+    ax.set_xlim(0, 10); ax.set_ylim(0, 10); ax.axis("off")
+    nodes = [(5.0, 8.6, "特征 X > 0.5?"), (2.6, 5.4, "特征 Y > 1.2?"), (7.4, 5.4, "类别 = B"),
+             (1.3, 2.0, "类别 = A"), (3.9, 2.0, "类别 = C")]
+    edges = [(0, 1, "是"), (0, 2, "否"), (1, 3, "是"), (1, 4, "否")]
+    for i, j, label in edges:
+        x0, y0, _ = nodes[i]; x1, y1, _ = nodes[j]
+        ax.annotate("", xy=(x1, y1 + 0.55), xytext=(x0, y0 - 0.55),
+                    arrowprops=dict(arrowstyle="-", color="#94a3b8", lw=1.3))
+        ax.text((x0 + x1) / 2 + 0.25, (y0 + y1) / 2, label, fontsize=7.5, color="#475569")
+    for x, y, name in nodes:
+        ax.add_patch(FancyBboxPatch((x - 1.25, y - 0.55), 2.5, 1.1,
+                                    boxstyle="round,pad=0.02,rounding_size=0.14",
+                                    facecolor="#f8fafc", edgecolor=PURPLE, lw=1.5))
+        ax.text(x, y, name, ha="center", va="center", fontsize=7.8)
+    ax.set_title("决策树 · 判断路径", fontsize=12, pad=6)
+    return save(fig, "tree")
+
+
+# 52 标签云（按权重排布的紧凑词块）
+def chart_wordcloud():
+    fig, ax = new(4.8, 3.4)
+    ax.set_xlim(0, 10); ax.set_ylim(0, 10); ax.axis("off")
+    words = [("假设", 100), ("推理链", 88), ("原子事实", 80), ("类比", 72), ("边界", 64),
+             ("正交", 56), ("变换", 50), ("频率", 42), ("相位", 36), ("直觉", 30)]
+    weights = [w for _, w in words]
+    x, y, row_h, maxx = 0.4, 9.2, 0.0, 9.6
+    for (w, wt) in words:
+        fs = 8 + 14 * (wt - 30) / 70.0
+        # 字符宽度近似：中文按 1.0 em，其它按 0.6 em
+        est = sum(1.0 if ord(ch) > 127 else 0.6 for ch in w) * fs / 14.0
+        if x + est > maxx:
+            x = 0.4; y -= row_h + 0.25; row_h = 0.0
+        ax.text(x, y, w, fontsize=fs, color=BLUE, va="top", ha="left", alpha=0.9)
+        x += est + 0.35
+        row_h = max(row_h, fs / 14.0)
+    ax.text(0.4, 0.5, "字号 ∝ 词频（词的「云」；比真词云更易读）", fontsize=7.5, color="#64748b")
+    ax.set_title("标签云 · 高频概念", fontsize=12, pad=6)
+    return save(fig, "wordcloud")
+
+
 CHARTS = [
     ("折线图", chart_line), ("堆叠面积图", chart_area), ("分组柱状图", chart_bar),
     ("条形图/棒棒糖", chart_hbar), ("散点图", chart_scatter), ("气泡图", chart_bubble),
@@ -758,7 +942,76 @@ CHARTS = [
     ("联合分布", chart_joint), ("六边形分箱", chart_hexbin), ("QQ 图", chart_qq),
     ("森林图", chart_forest), ("韦恩图", chart_venn), ("弧线图", chart_arc),
     ("日历热力", chart_calendar), ("矢量场", chart_quiver),
+    # 第三批（v1.8.0）
+    ("百分比堆叠条形", chart_pct_stacked), ("发散条形", chart_diverging),
+    ("哑铃图", chart_dumbbell), ("累积分布CDF", chart_cdf),
+    ("生存曲线", chart_survival), ("控制图", chart_control),
+    ("时间线", chart_timeline), ("流程图", chart_flow),
+    ("决策树", chart_tree), ("标签云", chart_wordcloud),
 ]
+
+
+# ---------------- 注册表：按需调用 -------------
+# 「按需调用」的核心：只渲染你点名的那一张，不必跑全部 52 张。
+# 分类用于 --list 检索；每个名字只能归一个主分类，避免歧义。
+CATEGORY_GROUPS = {
+    "比较": ["分组柱状图", "条形图/棒棒糖", "子弹图", "哑铃图", "斜率图", "雷达图",
+             "象限图", "发散条形", "帕累托图"],
+    "趋势": ["折线图", "堆叠面积图", "阶梯图", "折线+置信带", "迷你图矩阵",
+             "累积分布CDF", "控制图"],
+    "分布": ["直方图+KDE", "箱线图", "小提琴图", "条带图", "山脊图", "云雨图", "QQ 图"],
+    "关系": ["散点图", "气泡图", "热力图/相关矩阵", "平行坐标", "联合分布", "六边形分箱"],
+    "构成": ["树状图", "旭日图", "瀑布图", "华夫图", "百分比堆叠条形"],
+    "流向": ["桑基图", "漏斗图", "弧线图"],
+    "过程": ["甘特图", "时间线", "流程图", "决策树", "生存曲线"],
+    "空间与场": ["等高线/相图", "矢量场", "日历热力", "玫瑰图"],
+    "推断": ["误差棒图", "森林图"],
+    "结构": ["网络图", "韦恩图"],
+    "进度": ["环形仪表"],
+    "文本": ["标签云"],
+}
+
+
+def _file_key(fn):
+    """从函数源码里取 save(fig, "xxx") 的文件名，避免再维护一份映射表。"""
+    import inspect
+    try:
+        src = inspect.getsource(fn)
+    except OSError:
+        return None
+    found = re.findall(r'save\(fig, "([^"]+)"\)', src)
+    return found[-1] if found else None
+
+
+def build_registry():
+    fn_by_name = dict(CHARTS)
+    reg = {}
+    for cat, names in CATEGORY_GROUPS.items():
+        for n in names:
+            fn = fn_by_name.get(n)
+            if fn is None:
+                continue
+            reg[n] = {"fn": fn, "category": cat, "file": _file_key(fn)}
+    return reg
+
+
+REGISTRY = build_registry()
+
+
+def render_one(name, out=None):
+    """按名渲染一张图；out 给定时复制到该路径。返回实际文件路径。"""
+    item = REGISTRY.get(name)
+    if item is None:
+        raise KeyError(name)
+    path = item["fn"]()
+    if out:
+        import shutil
+        out_dir = os.path.dirname(os.path.abspath(out))
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+        shutil.copyfile(path, out)
+        return out
+    return path
 
 
 def contact_sheet(paths):

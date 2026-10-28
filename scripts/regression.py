@@ -353,7 +353,7 @@ def run_visual_chain():
     cat_path = os.path.join(REF, "chart-catalog.md")
     cat = open(cat_path, encoding="utf-8").read() if os.path.isfile(cat_path) else ""
     n_charts = len(re.findall(r"^\| \d+ \|", cat, re.M))
-    cat_ok = (n_charts >= 40 and "反模式" in cat and "chart-catalog.md" in tech
+    cat_ok = (n_charts >= 50 and "反模式" in cat and "chart-catalog.md" in tech
               and "chart_gallery.py" in tech and "按问题类型选图" in cat)
     results.append(("doc-图表目录", "PASS" if cat_ok else "FAIL",
                     f"{n_charts} 种图表入库" if cat else "缺 chart-catalog.md"))
@@ -366,11 +366,40 @@ def run_visual_chain():
             gp = subprocess.run([sys.executable, gallery], capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=300)
             gm = re.search(r"SUMMARY (\d+) ok, (\d+) failed", gp.stdout or "")
-            g_ok = bool(gm) and int(gm.group(1)) >= 40 and int(gm.group(2)) == 0
+            g_ok = bool(gm) and int(gm.group(1)) >= 50 and int(gm.group(2)) == 0
             results.append(("viz-图表画廊", "PASS" if g_ok else "FAIL",
                             gm.group(0) if gm else (gp.stdout or gp.stderr or "")[-120:]))
         except Exception as e:
             results.append(("viz-图表画廊", "FAIL", f"{type(e).__name__}: {e}"))
+
+    # ---- v1.8.0：按需调用 CLI（列清单 + 按名渲染单张）----
+    cli = os.path.join(BASE, "scripts", "chart.py")
+    if not os.path.isfile(cli):
+        results.append(("viz-图表按需调用", "FAIL", "缺 scripts/chart.py"))
+    else:
+        try:
+            pl = subprocess.run([sys.executable, cli, "--list"], capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=120)
+            pj = subprocess.run([sys.executable, cli, "--json"], capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=120)
+            total = 0
+            if pj.returncode == 0 and (pj.stdout or "").strip().startswith("{"):
+                total = len(json.loads(pj.stdout).get("charts", {}))
+            one_out = os.path.join(tempfile.gettempdir(), "_chart_one_test.png")
+            if os.path.exists(one_out):
+                os.remove(one_out)
+            po = subprocess.run([sys.executable, cli, "箱线图", "--out", one_out],
+                                capture_output=True, text=True, encoding="utf-8",
+                                errors="replace", timeout=180)
+            one_ok = (po.returncode == 0 and os.path.isfile(one_out)
+                      and os.path.getsize(one_out) > 1024)
+            cli_ok = (pl.returncode == 0 and total >= 50 and one_ok
+                      and "共" in (pl.stdout or ""))
+            status = "OK" if one_ok else "FAIL"
+            results.append(("viz-图表按需调用", "PASS" if cli_ok else "FAIL",
+                            f"注册 {total} 种；单张渲染 {status}"))
+        except Exception as e:
+            results.append(("viz-图表按需调用", "FAIL", f"{type(e).__name__}: {e}"))
 
 
 def run_web_selftest():

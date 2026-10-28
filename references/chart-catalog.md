@@ -1,14 +1,22 @@
 # 图表目录（chart catalog）
 
-> Phase 4 选图先查这张表。**表中 42 种图表全部由 `scripts/chart_gallery.py` 真实渲染**，
-> 产物在 `docs/images/charts/`（含拼版 `_gallery.png`），可随时重跑复现。
+> Phase 4 选图先查这张表。**表中 52 种图表全部真机渲染**，产物在 `docs/images/charts/`，可随时复现。
+>
+> **按需调用（推荐）**：只想要某一张，不必跑全部 ——
+>
+> ```bash
+> python scripts/chart.py --list            # 按分类列出 52 种
+> python scripts/chart.py --search 分布      # 关键词检索
+> python scripts/chart.py 箱线图 --out out.png   # 只渲染这一张
+> python scripts/chart.py --all             # 全量 + 拼版（CI/发版用）
+> ```
 
 ## 0. 一句话原则
 
 **先问「读者要回答什么问题」，再选图。** 同一个数据集能画十几种图，选错的代价是读者得出错误结论——
 比「画得不好看」严重得多。下表按「问题类型」组织，不按图形名字母序。
 
-## 1. 当前支持清单（42 种，已真机渲染）
+## 1. 当前支持清单（52 种，已真机渲染）
 
 | # | 图表 | 回答什么问题 | 文件 |
 |---|---|---|---|
@@ -54,6 +62,16 @@
 | 40 | 弧线图 | 一维排布上的关系（比网络图更省空间） | `arc.png` |
 | 41 | 日历热力 | 按周 × 星期的强度节律 | `calendar.png` |
 | 42 | 矢量场 | 方向与强度（流场、梯度场） | `quiver.png` |
+| 43 | 百分比堆叠条形 | 不同群体的构成差异 | `pct_stacked.png` |
+| 44 | 发散条形 | 正负贡献、盈亏拆解 | `diverging.png` |
+| 45 | 哑铃图 | 两组之间的变化（前后对比） | `dumbbell.png` |
+| 46 | 累积分布 CDF | 分布全貌、分位数 | `cdf.png` |
+| 47 | 生存曲线 | 保持率/留存随时间衰减 | `survival.png` |
+| 48 | 控制图 | 过程是否失控（±2σ/±3σ） | `control.png` |
+| 49 | 时间线 | 事件先后顺序 | `timeline.png` |
+| 50 | 流程图 | 步骤与分支 | `flow.png` |
+| 51 | 决策树 | 判断路径与分类规则 | `tree.png` |
+| 52 | 标签云 | 高频概念（字号 ∝ 词频） | `wordcloud.png` |
 
 ![图表画廊拼版](../../docs/images/charts/_gallery.png)
 
@@ -204,7 +222,7 @@
 ## 6. 复现命令
 
 ```bash
-python scripts/chart_gallery.py     # 重渲染 42 张图 + 拼版到 docs/images/charts/
+python scripts/chart.py --all       # 重渲染全部 + 拼版（单张用 chart.py <名称>）
 ```
 
 依赖：matplotlib / numpy / scipy / networkx / squarify（均为纯 Python，缺失时对应单图会跳过并在输出里标 FAIL，不影响其余）。
