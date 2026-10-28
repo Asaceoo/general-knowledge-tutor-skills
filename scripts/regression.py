@@ -401,6 +401,30 @@ def run_visual_chain():
         except Exception as e:
             results.append(("viz-图表按需调用", "FAIL", f"{type(e).__name__}: {e}"))
 
+    # ---- v1.9.0：CLI 边界语义 + 注册表完整性（R12-1）----
+    if os.path.isfile(cli):
+        try:
+            def _rc(*cargs):
+                q = subprocess.run([sys.executable, cli] + list(cargs), capture_output=True,
+                                   text=True, encoding="utf-8", errors="replace", timeout=120)
+                return q.returncode
+            rc_unknown = _rc("不存在的图")
+            rc_missing = _rc("箱线图", "--out")
+            rc_none = _rc("--list", "火星")
+            sp = os.path.join(BASE, "scripts").replace("\\", "/")
+            probe = ("import sys; sys.path.insert(0, " + repr(sp) + "); import chart_gallery as cg; "
+                     "n = [x for v in cg.CATEGORY_GROUPS.values() for x in v]; "
+                     "print(len(n), len(set(n)), len(cg.CHARTS), len(cg.REGISTRY))")
+            pq = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=120)
+            nums = [int(x) for x in (pq.stdout or "").split()] if pq.returncode == 0 else []
+            integ = len(nums) == 4 and nums[0] == nums[1] == nums[2] == nums[3] >= 50
+            ok2 = (rc_unknown == 1 and rc_missing == 2 and rc_none == 0 and integ)
+            results.append(("viz-图表CLI边界", "PASS" if ok2 else "FAIL",
+                            "未知=%s 缺参=%s 无匹配=%s 注册表=%s" % (rc_unknown, rc_missing, rc_none, nums)))
+        except Exception as e:
+            results.append(("viz-图表CLI边界", "FAIL", f"{type(e).__name__}: {e}"))
+
 
 def run_web_selftest():
     """v1.5.2 交互产物自测：模板 headless 断言 + 断言器脚本真机跑通"""

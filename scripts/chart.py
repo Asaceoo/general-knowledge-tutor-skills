@@ -33,7 +33,11 @@ def print_list(keyword=None):
             print(f"  {n:<12} -> {f}.png")
             shown += 1
     print(f"\n共 {shown} 种（总注册 {len(cg.REGISTRY)} 种）")
-    return 0 if shown else 3
+    if not shown:
+        # 「没有匹配」不是错误：搜不到就只是搜不到。
+        # 曾经返回 3，与 docstring 约定的 0/1/2 不符，脚本里 if 判断会误判成故障（R12-1）。
+        print("（无匹配；用 --list 看全部）")
+    return 0
 
 
 def main(argv):
