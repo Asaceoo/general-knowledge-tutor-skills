@@ -459,6 +459,288 @@ def chart_sankey():
     return save(fig, "sankey")
 
 
+# ============ 第二批（v1.7.0）============
+
+
+# 26 阶梯图
+def chart_step():
+    fig, ax = new()
+    x = np.arange(1, 11)
+    y = np.array([3, 3, 5, 5, 5, 8, 8, 6, 6, 9])
+    ax.step(x, y, where="post", color=BLUE, lw=2.2, marker="o", ms=5)
+    ax.fill_between(x, y, step="post", color=BLUE, alpha=0.12)
+    style(ax, "阶梯图 · 分段恒定", "阶段", "取值")
+    return save(fig, "step")
+
+
+# 27 折线 + 置信带
+def chart_ci():
+    fig, ax = new()
+    x = np.arange(20)
+    m = 50 + 6 * np.sin(x / 3) + x * 0.4
+    se = 3 + np.linspace(0, 2.2, 20)
+    ax.plot(x, m, color=BLUE, lw=2.2, label="均值")
+    ax.fill_between(x, m - 1.96 * se, m + 1.96 * se, color=BLUE, alpha=0.18, label="95% 置信带")
+    ax.legend(fontsize=8, frameon=False, loc="upper left")
+    style(ax, "折线 + 置信带 · 不确定性", "期数", "取值")
+    return save(fig, "ci")
+
+
+# 28 迷你图矩阵（小倍数）
+def chart_sparkline():
+    fig, axes = plt.subplots(3, 4, figsize=(5.2, 3.4), dpi=110)
+    fig.patch.set_facecolor("white")
+    for i, ax in enumerate(axes.ravel()):
+        y = np.cumsum(rng.normal(0, 1, 24))
+        ax.plot(y, color=PALETTE[i % len(PALETTE)], lw=1.6)
+        ax.set_xticks([]); ax.set_yticks([])
+        for s in ax.spines.values():
+            s.set_visible(False)
+        ax.set_title(f"指标 {i + 1}", fontsize=7.5, pad=2)
+    fig.suptitle("迷你图矩阵 · 小倍数看趋势", fontsize=12, y=1.02)
+    fig.tight_layout()
+    return save(fig, "sparkline")
+
+
+# 29 帕累托图（唯一允许双轴的场景：柱=频次，线=累计占比）
+def chart_pareto():
+    fig, ax = new()
+    cats = ["概念不清", "缺练习", "时间不足", "无反馈", "环境差"]
+    v = np.array([38, 27, 18, 11, 6])
+    order = np.argsort(-v)
+    v = v[order]; cats = [cats[i] for i in order]
+    cum = np.cumsum(v) / v.sum() * 100
+    ax.bar(cats, v, color=BLUE, alpha=0.85)
+    ax.set_ylabel("出现次数", fontsize=9)
+    ax2 = ax.twinx()
+    ax2.plot(cats, cum, "o-", color=ROSE, lw=2)
+    ax2.set_ylim(0, 108); ax2.set_ylabel("累计占比 (%)", fontsize=9, color=ROSE)
+    ax2.axhline(80, color=GRAY, ls="--", lw=1)
+    ax.set_title("帕累托图 · 抓主要矛盾", fontsize=12, pad=8)
+    ax.tick_params(labelsize=8); ax2.tick_params(labelsize=8)
+    return save(fig, "pareto")
+
+
+# 30 子弹图
+def chart_bullet():
+    fig, ax = new()
+    rows = ["营收", "留存", "满意度"]
+    ranges = [(0, 60), (0, 55), (0, 70)]
+    targets = [78, 72, 85]
+    actuals = [71, 64, 88]
+    for i, (rng_, t, a) in enumerate(zip(ranges, targets, actuals)):
+        lo, hi = rng_
+        ax.barh(i, hi, left=0, height=0.5, color="#e2e8f0")
+        ax.barh(i, hi * 0.75, left=0, height=0.5, color="#cbd5e1")
+        ax.barh(i, hi * 0.45, left=0, height=0.5, color="#94a3b8")
+        ax.plot([a, a], [i - 0.28, i + 0.28], color=BLUE, lw=6)
+        ax.plot([t, t], [i - 0.30, i + 0.30], color="#0f172a", lw=2.2, ls=(0, (2, 1.5)))
+        ax.text(108, i, f"{a} / 目标 {t}", va="center", fontsize=8.5, color="#334155")
+    ax.set_yticks(range(len(rows))); ax.set_yticklabels(rows)
+    ax.set_xlim(0, 132)
+    style(ax, "子弹图 · 实际 vs 目标", "指标值", "")
+    return save(fig, "bullet")
+
+
+# 31 环形仪表
+def chart_gauge():
+    fig, ax = new(4.4, 3.0)
+    ax.set_aspect("equal"); ax.axis("off")
+    ax.add_patch(Wedge((0, 0), 1.0, 0, 180, width=0.22, facecolor="#e2e8f0", edgecolor="none"))
+    val = 0.72
+    ax.add_patch(Wedge((0, 0), 1.0, 180 - 180 * val, 180, width=0.22, facecolor=BLUE, edgecolor="none"))
+    ang = math.radians(180 - 180 * val)
+    ax.plot([0, 0.78 * math.cos(ang)], [0, 0.78 * math.sin(ang)], color="#0f172a", lw=3)
+    ax.add_patch(Circle((0, 0), 0.09, color="#0f172a"))
+    ax.text(0, -0.28, f"{val * 100:.0f}%", ha="center", fontsize=20, color=INK if False else "#0f172a")
+    ax.text(0, -0.52, "目标完成度", ha="center", fontsize=9, color="#64748b")
+    ax.set_xlim(-1.15, 1.15); ax.set_ylim(-0.68, 1.15)
+    ax.set_title("环形仪表 · 单值进度", fontsize=12, pad=4)
+    return save(fig, "gauge")
+
+
+# 32 华夫图
+def chart_waffle():
+    fig, ax = new(4.2, 3.6)
+    ax.set_aspect("equal"); ax.axis("off")
+    total, parts = 100, [42, 27, 18, 13]
+    cols = [BLUE, ORANGE, GREEN, ROSE]
+    filled = 0
+    for i in range(total):
+        r, c = divmod(i, 10)
+        ax.add_patch(Rectangle((c, 9 - r), 0.86, 0.86, facecolor="#eef2f7", edgecolor="white"))
+    for p, color in zip(parts, cols):
+        for _ in range(p):
+            r, c = divmod(filled, 10)
+            ax.add_patch(Rectangle((c, 9 - r), 0.86, 0.86, facecolor=color, edgecolor="white", alpha=0.9))
+            filled += 1
+    ax.set_xlim(-0.3, 10); ax.set_ylim(-0.3, 10)
+    ax.set_title("华夫图 · 每格 1% 的构成", fontsize=12, pad=6)
+    return save(fig, "waffle")
+
+
+# 33 玫瑰图
+def chart_rose():
+    fig = plt.figure(figsize=(4.4, 3.7), dpi=110)
+    ax = fig.add_subplot(111, polar=True)
+    n = 12
+    ang = np.linspace(0, 2 * np.pi, n, endpoint=False)
+    v = np.array([8, 6, 9, 12, 15, 18, 21, 19, 14, 11, 9, 7])
+    ax.bar(ang, v, width=2 * np.pi / n * 0.9, color=BLUE, alpha=0.8, edgecolor="white")
+    ax.set_theta_zero_location("N"); ax.set_theta_direction(-1)
+    ax.set_xticks(ang); ax.set_xticklabels([f"{i+1}月" for i in range(n)], fontsize=7.5)
+    ax.set_yticklabels([])
+    ax.set_title("玫瑰图 · 周期分布", fontsize=12, pad=14)
+    return save(fig, "rose")
+
+
+# 34 云雨图（半小提琴 + 箱线 + 散点）
+def chart_raincloud():
+    from scipy.stats import gaussian_kde
+    fig, ax = new(4.8, 3.6)
+    groups = [rng.normal(60, 9, 70), rng.normal(70, 13, 70)]
+    for i, (g, c) in enumerate(zip(groups, [BLUE, ORANGE]), start=1):
+        d = gaussian_kde(g)
+        ys = np.linspace(g.min(), g.max(), 120)
+        xs = d(ys)
+        xs = xs / xs.max() * 0.34
+        ax.fill_betweenx(ys, i - xs, i, color=c, alpha=0.55, lw=0)
+        ax.boxplot([g], positions=[i + 0.18], widths=0.12, patch_artist=True,
+                   boxprops=dict(facecolor=c, alpha=0.6), medianprops=dict(color="#0f172a"))
+        jx = rng.normal(i + 0.42, 0.035, len(g))
+        ax.scatter(jx, g, s=12, color=c, alpha=0.55, edgecolor="none")
+    ax.set_xticks([1, 2]); ax.set_xticklabels(["A 组", "B 组"])
+    ax.set_xlim(0.4, 2.9)
+    style(ax, "云雨图 · 分布全貌", "", "取值")
+    return save(fig, "raincloud")
+
+
+# 35 联合分布（散点 + 边际直方）
+def chart_joint():
+    fig = plt.figure(figsize=(4.8, 4.0), dpi=110)
+    fig.patch.set_facecolor("white")
+    gs = fig.add_gridspec(4, 4, hspace=0.08, wspace=0.08)
+    ax = fig.add_subplot(gs[1:4, 0:3])
+    axh = fig.add_subplot(gs[0, 0:3], sharex=ax)
+    axv = fig.add_subplot(gs[1:4, 3], sharey=ax)
+    x = rng.normal(50, 12, 160); y = 0.55 * x + rng.normal(0, 7, 160) + 8
+    ax.scatter(x, y, s=16, color=BLUE, alpha=0.6, edgecolor="none")
+    axh.hist(x, bins=18, color=BLUE, alpha=0.55)
+    axv.hist(y, bins=18, orientation="horizontal", color=BLUE, alpha=0.55)
+    axh.axis("off"); axv.axis("off")
+    ax.tick_params(labelsize=7.5); ax.grid(alpha=0.2)
+    ax.set_xlabel("X", fontsize=8); ax.set_ylabel("Y", fontsize=8)
+    ax.set_title("联合分布 · 散点 + 边际", fontsize=12, pad=18)
+    return save(fig, "joint")
+
+
+# 36 六边形分箱
+def chart_hexbin():
+    fig, ax = new()
+    x = rng.normal(0, 1, 4000); y = x * 0.6 + rng.normal(0, 1, 4000)
+    hb = ax.hexbin(x, y, gridsize=22, cmap="viridis", mincnt=1)
+    fig.colorbar(hb, ax=ax, shrink=0.82, label="计数")
+    ax.set_title("六边形分箱 · 大样本密度", fontsize=12, pad=8)
+    ax.tick_params(labelsize=8)
+    return save(fig, "hexbin")
+
+
+# 37 QQ 图
+def chart_qq():
+    from scipy import stats
+    fig, ax = new()
+    d = np.concatenate([rng.normal(0, 1, 180), rng.normal(3, 0.8, 40)])
+    stats.probplot(d, dist="norm", plot=ax)
+    ax.get_lines()[0].set(color=BLUE, ms=4, alpha=0.7)
+    ax.get_lines()[1].set(color=ROSE, lw=2)
+    ax.set_title("QQ 图 · 与正态的偏离", fontsize=12, pad=8)
+    ax.set_xlabel("理论分位数", fontsize=8.5); ax.set_ylabel("样本分位数", fontsize=8.5)
+    ax.tick_params(labelsize=8); ax.grid(alpha=0.22)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    return save(fig, "qq")
+
+
+# 38 森林图
+def chart_forest():
+    fig, ax = new(4.8, 3.7)
+    labels = ["研究 A", "研究 B", "研究 C", "研究 D", "合并"]
+    est = np.array([0.72, 0.85, 0.64, 0.91, 0.78])
+    lo = np.array([0.55, 0.66, 0.44, 0.72, 0.70])
+    hi = np.array([0.94, 1.09, 0.93, 1.15, 0.87])
+    y = np.arange(len(labels))[::-1]
+    ax.axvline(1.0, color=GRAY, ls="--", lw=1.2)
+    for i, (e, l, h) in enumerate(zip(est, lo, hi)):
+        c = BLUE if i < len(labels) - 1 else ROSE
+        ax.plot([l, h], [y[i], y[i]], color=c, lw=2)
+        ax.plot([e], [y[i]], "s", color=c, ms=8)
+    ax.set_yticks(y); ax.set_yticklabels(labels)
+    ax.set_xlim(0.35, 1.25)
+    style(ax, "森林图 · 效应量与区间", "风险比 (1 = 无差异)", "")
+    return save(fig, "forest")
+
+
+# 39 韦恩图
+def chart_venn():
+    fig, ax = new(4.2, 3.7)
+    ax.set_aspect("equal"); ax.axis("off")
+    ax.add_patch(Circle((-0.42, 0), 0.95, color=BLUE, alpha=0.35))
+    ax.add_patch(Circle((0.42, 0), 0.95, color=ORANGE, alpha=0.35))
+    ax.text(-0.86, 0.72, "A 集合", fontsize=10, color="#1e3a8a")
+    ax.text(0.52, 0.72, "B 集合", fontsize=10, color="#9a3412")
+    ax.text(-0.62, 0.02, "128", fontsize=12, color="#0f172a")
+    ax.text(0.62, 0.02, "96", fontsize=12, color="#0f172a")
+    ax.text(0, 0.02, "54", fontsize=13, color="#0f172a")
+    ax.set_xlim(-1.5, 1.5); ax.set_ylim(-1.2, 1.2)
+    ax.set_title("韦恩图 · 集合重叠", fontsize=12, pad=6)
+    return save(fig, "venn")
+
+
+# 40 弧线图
+def chart_arc():
+    from matplotlib.patches import FancyArrowPatch
+    fig, ax = new(5.0, 3.0)
+    nodes = ["基础", "概念", "方法", "应用", "边界"]
+    xs = np.arange(len(nodes))
+    ax.plot([xs.min() - 0.3, xs.max() + 0.3], [0, 0], color="#cbd5e1", lw=1.5, zorder=1)
+    for i, n in enumerate(nodes):
+        ax.plot([i], [0], "o", color=BLUE, ms=14, zorder=3)
+        ax.text(i, -0.34, n, ha="center", fontsize=8.5)
+    pairs = [(0, 1), (0, 2), (1, 3), (2, 4), (0, 4)]
+    for i, j in pairs:
+        ax.add_patch(FancyArrowPatch((i, 0.08), (j, 0.08), connectionstyle="arc3,rad=-0.45",
+                                     arrowstyle="-", color=ORANGE, lw=1.6, alpha=0.75, zorder=2))
+    ax.set_ylim(-0.7, 1.1); ax.set_xlim(-0.6, len(nodes) - 0.4)
+    ax.axis("off")
+    ax.set_title("弧线图 · 一维排布上的关系", fontsize=12, pad=6)
+    return save(fig, "arc")
+
+
+# 41 日历热力
+def chart_calendar():
+    fig, ax = new(5.0, 3.0)
+    weeks = 20
+    data = np.abs(rng.normal(3, 2, (7, weeks)))
+    im = ax.imshow(data, cmap="YlGnBu", aspect="auto")
+    ax.set_yticks(range(7)); ax.set_yticklabels(["一", "二", "三", "四", "五", "六", "日"], fontsize=7.5)
+    ax.set_xticks(range(0, weeks, 4)); ax.set_xticklabels([f"W{i+1}" for i in range(0, weeks, 4)], fontsize=7.5)
+    fig.colorbar(im, ax=ax, shrink=0.8, label="强度")
+    ax.set_title("日历热力 · 按周 × 星期看强度", fontsize=12, pad=8)
+    return save(fig, "calendar")
+
+
+# 42 矢量场
+def chart_quiver():
+    fig, ax = new()
+    x, y = np.meshgrid(np.linspace(-2, 2, 15), np.linspace(-2, 2, 15))
+    u, v = -y, x
+    ax.quiver(x, y, u, v, np.hypot(u, v), cmap="viridis", pivot="mid")
+    ax.set_aspect("equal")
+    ax.set_title("矢量场 · 方向与强度", fontsize=12, pad=8)
+    ax.tick_params(labelsize=8)
+    return save(fig, "quiver")
+
+
 CHARTS = [
     ("折线图", chart_line), ("堆叠面积图", chart_area), ("分组柱状图", chart_bar),
     ("条形图/棒棒糖", chart_hbar), ("散点图", chart_scatter), ("气泡图", chart_bubble),
@@ -469,6 +751,13 @@ CHARTS = [
     ("平行坐标", chart_parallel), ("斜率图", chart_slope), ("象限图", chart_quadrant),
     ("误差棒图", chart_errorbar), ("等高线/相图", chart_contour), ("网络图", chart_network),
     ("桑基图", chart_sankey),
+    # 第二批（v1.7.0）
+    ("阶梯图", chart_step), ("折线+置信带", chart_ci), ("迷你图矩阵", chart_sparkline),
+    ("帕累托图", chart_pareto), ("子弹图", chart_bullet), ("环形仪表", chart_gauge),
+    ("华夫图", chart_waffle), ("玫瑰图", chart_rose), ("云雨图", chart_raincloud),
+    ("联合分布", chart_joint), ("六边形分箱", chart_hexbin), ("QQ 图", chart_qq),
+    ("森林图", chart_forest), ("韦恩图", chart_venn), ("弧线图", chart_arc),
+    ("日历热力", chart_calendar), ("矢量场", chart_quiver),
 ]
 
 
@@ -483,7 +772,7 @@ def contact_sheet(paths):
         im = Image.open(p).convert("RGB")
         im.thumbnail((420, 320))
         thumbs.append(im)
-    cols = 5
+    cols = 6
     rows = math.ceil(len(thumbs) / cols)
     cw, ch = 440, 360
     sheet = Image.new("RGB", (cols * cw, rows * ch), "white")

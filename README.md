@@ -5,7 +5,7 @@
 
 **三份文档分工**：[README](README.md) 是门面（你现在看的）· [用户手册](USER_GUIDE.md) 教你怎么用 · [技术手册](TECHNICAL.md) 讲原理与二次开发。
 
-> 当前版本：v1.6.0（2026-10-29）· 更新日志见 [TECHNICAL.md](TECHNICAL.md) §7
+> 当前版本：v1.7.0（2026-10-29）· 更新日志见 [TECHNICAL.md](TECHNICAL.md) §7
 
 ---
 
@@ -33,11 +33,11 @@
 
 *图 2 · 能力矩阵：过程演化走 Manim，场与曲面走 PyVista，空间结构走 glb + model-viewer*
 
-### 2.1 图表不是只有柱状和折线：**25 种**已真机渲染
+### 2.1 图表不是只有柱状和折线：**42 种**已真机渲染
 
 「数据/分布/关系」这一档往下，技能有完整的图表目录：按「读者要回答什么问题」选图，而不是按图形名字选。
 
-![图表画廊：25 种图表](docs/images/charts/_gallery.png)
+![图表画廊：42 种图表](docs/images/charts/_gallery.png)
 
 *图 2a · 图表画廊（`scripts/chart_gallery.py` 真实渲染，可复跑）*
 

@@ -353,7 +353,7 @@ def run_visual_chain():
     cat_path = os.path.join(REF, "chart-catalog.md")
     cat = open(cat_path, encoding="utf-8").read() if os.path.isfile(cat_path) else ""
     n_charts = len(re.findall(r"^\| \d+ \|", cat, re.M))
-    cat_ok = (n_charts >= 25 and "反模式" in cat and "chart-catalog.md" in tech
+    cat_ok = (n_charts >= 40 and "反模式" in cat and "chart-catalog.md" in tech
               and "chart_gallery.py" in tech and "按问题类型选图" in cat)
     results.append(("doc-图表目录", "PASS" if cat_ok else "FAIL",
                     f"{n_charts} 种图表入库" if cat else "缺 chart-catalog.md"))
@@ -366,7 +366,7 @@ def run_visual_chain():
             gp = subprocess.run([sys.executable, gallery], capture_output=True, text=True,
                                 encoding="utf-8", errors="replace", timeout=300)
             gm = re.search(r"SUMMARY (\d+) ok, (\d+) failed", gp.stdout or "")
-            g_ok = bool(gm) and int(gm.group(1)) >= 20 and int(gm.group(2)) == 0
+            g_ok = bool(gm) and int(gm.group(1)) >= 40 and int(gm.group(2)) == 0
             results.append(("viz-图表画廊", "PASS" if g_ok else "FAIL",
                             gm.group(0) if gm else (gp.stdout or gp.stderr or "")[-120:]))
         except Exception as e:
