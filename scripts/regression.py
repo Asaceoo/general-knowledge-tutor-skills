@@ -349,6 +349,29 @@ def run_visual_chain():
     for label, ok in checks:
         results.append((label, "PASS" if ok else "FAIL", "v1.5.1 可视化链路断言"))
 
+    # ---- v1.6.0：图表目录 + 画廊真机渲染 ----
+    cat_path = os.path.join(REF, "chart-catalog.md")
+    cat = open(cat_path, encoding="utf-8").read() if os.path.isfile(cat_path) else ""
+    n_charts = len(re.findall(r"^\| \d+ \|", cat, re.M))
+    cat_ok = (n_charts >= 25 and "反模式" in cat and "chart-catalog.md" in tech
+              and "chart_gallery.py" in tech and "按问题类型选图" in cat)
+    results.append(("doc-图表目录", "PASS" if cat_ok else "FAIL",
+                    f"{n_charts} 种图表入库" if cat else "缺 chart-catalog.md"))
+
+    gallery = os.path.join(BASE, "scripts", "chart_gallery.py")
+    if not os.path.isfile(gallery):
+        results.append(("viz-图表画廊", "FAIL", "缺 scripts/chart_gallery.py"))
+    else:
+        try:
+            gp = subprocess.run([sys.executable, gallery], capture_output=True, text=True,
+                                encoding="utf-8", errors="replace", timeout=300)
+            gm = re.search(r"SUMMARY (\d+) ok, (\d+) failed", gp.stdout or "")
+            g_ok = bool(gm) and int(gm.group(1)) >= 20 and int(gm.group(2)) == 0
+            results.append(("viz-图表画廊", "PASS" if g_ok else "FAIL",
+                            gm.group(0) if gm else (gp.stdout or gp.stderr or "")[-120:]))
+        except Exception as e:
+            results.append(("viz-图表画廊", "FAIL", f"{type(e).__name__}: {e}"))
+
 
 def run_web_selftest():
     """v1.5.2 交互产物自测：模板 headless 断言 + 断言器脚本真机跑通"""

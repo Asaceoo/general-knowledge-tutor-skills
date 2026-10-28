@@ -127,6 +127,14 @@ def collect_files():
         for f in sorted(os.listdir(d)):
             if f.endswith((".md", ".json", ".py", ".html")) and not f.startswith("_"):
                 files.append(os.path.join(sub, f))
+    # 文档配图递归入包（README 概念图 / 图表画廊），避免包内文档图片链接失效。
+    # 早期实现只扫一层，导致 docs/images/charts/* 全部漏包（v1.6.0 修复）。
+    img_root = os.path.join(BASE, "docs", "images")
+    for dirpath, _dirs, fnames in os.walk(img_root):
+        for f in sorted(fnames):
+            if f.lower().endswith((".png", ".jpg", ".jpeg", ".svg", ".webp")):
+                full = os.path.join(dirpath, f)
+                files.append(os.path.relpath(full, BASE))
     return files
 
 def main():

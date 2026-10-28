@@ -116,6 +116,13 @@ compatibility: >-
 | 结构 / 流程 / 状态机 / 体系 DAG | 文本即图 | **Mermaid**（Markdown 原生渲染，见 references/extended-viz-2.md） | graphviz 出 PNG |
 | 力学 / 碰撞 / 真实物理过程 | 物理引擎模拟 | **pymunk**（真实数值计算 + 近似失效边界，见 references/extended-viz-2.md） | matplotlib 手绘帧动画 |
 | 讲解可听化 / 3D 可交互 / 自测闭环 | 配音 / 单文件 3D / 测验 | **edge-tts**（中文语音）+ **model-viewer**（glb 内嵌 HTML）+ 自测 HTML/genanki（见 references/extended-viz-2.md） | 纯文字通俗版 / mp4 动画 |
+| 分布形态（偏态 / 多峰 / 离群） | 直方图+KDE / 箱线 / 小提琴 / 山脊 | **matplotlib**（见 references/chart-catalog.md） | 条带图（样本 <20 时最诚实） |
+| 构成与占比 | 堆叠柱 / 树状图 / 旭日图 | **matplotlib + squarify**（见 references/chart-catalog.md） | 百分比条形（饼图仅 ≤5 类） |
+| 流向与转化 | 桑基图 / 漏斗图 | **matplotlib 手绘流带**；和弦图用 ECharts（见 references/chart-catalog.md） | 两列对比条形 + 转化表 |
+| 进度与排期 | 甘特图 / 时间线 | **matplotlib broken_barh**（见 references/chart-catalog.md） | 里程碑表 |
+| 多维比较与权衡 | 平行坐标 / 雷达图 / 斜率图 | **matplotlib**（见 references/chart-catalog.md） | 小倍数图 |
+| 统计推断与不确定性 | 误差棒 / 置信带 / 森林图 | **matplotlib errorbar**（见 references/chart-catalog.md） | 文字给区间 + 样本量 |
+| 空间分布与场（2D） | 等高线 / 相图 / choropleth | **matplotlib contourf**；地图用 plotly（见 references/chart-catalog.md） | 分块示意图 |
 
 > 3D 启用门槛：仅在「空间结构本身承载信息」时使用（旋转→振荡、螺旋、场、曲面、轨道）；能用 2D 讲清的不上 3D。选型与坑（深度伪影、无缝环绕、CDN 降级）见 references/3d-animation.md。
 >

@@ -25,6 +25,7 @@ general-knowledge-tutor/
 │   ├── extended-viz.md            # 扩展工具箱（ECharts/D3/p5.js/pyvis/schemdraw/GeoGebra/Desmos）
 │   ├── extended-viz-2.md          # 第二批次（Mermaid/pymunk/edge-tts/自测 HTML+genanki/trimesh→model-viewer）
 │   ├── audit-checklist.md         # 对抗性审查台账：改任何内容后必须过这张清单
+│   ├── chart-catalog.md           # 图表目录：25 种图表 + 按问题类型选图 + 反模式 + 扩展路线
 │   └── templates/
 │       ├── quiz-template.html             # 自测 HTML（esc 转义防注入 + #selftest 判分模式）
 │       ├── selftest-web-template.html     # SELFTEST 约定（非空/交互/WebGL 断言 + a11y）
@@ -35,8 +36,9 @@ general-knowledge-tutor/
 │   ├── package.py                 # 一键打包：VERSION 单一来源 + 原子递增 + 三份手册版本同步 + zip 自检
 │   ├── regression.py              # 全量回归：代码块真机执行 + headless 断言 + 文档一致性
 │   ├── selftest_web.py            # 交互/3D 产物断言器（Chrome headless，退出码 0/1/2）
-│   └── make_readme_figures.py     # 生成 README 概念图（matplotlib，输出到 docs/images）
-└── docs/images/                   # README 概念图与真实产出示例（打包时一并入包）
+│   ├── make_readme_figures.py     # 生成 README 概念图（matplotlib，输出到 docs/images）
+│   └── chart_gallery.py           # 真实渲染 25 种图表 + 拼版（chart-catalog.md 的可执行证据）
+└── docs/images/                   # README 概念图、真实产出示例、图表画廊（打包时一并入包）
 ```
 
 **设计定位**：声明式技能 + 少量工程脚本。技能交付物由智能体在运行时按模板生成；`scripts/` 下的脚本只服务**技能自身的打包、自检与回归**，不参与运行时交付。好处是跨平台零适配；代价是依赖宿主具备「写文件 + 执行命令」能力。
@@ -88,6 +90,13 @@ general-knowledge-tutor/
 | 结构/流程/状态机/体系 DAG | Mermaid 文本即图 | graphviz 出 PNG |
 | 力学/碰撞/真实物理过程 | pymunk 物理引擎真实模拟 | matplotlib 手绘帧动画 |
 | 讲解可听化 / 3D 可交互 / 自测闭环 | edge-tts 配音 + model-viewer 单文件 3D + 自测 HTML/genanki | 纯文字通俗版 / mp4 动画 |
+| 分布形态（偏态/多峰/离群） | 直方图+KDE / 箱线 / 小提琴 / 山脊 | 条带图（样本 <20） |
+| 构成与占比 | 堆叠柱 / 树状图 / 旭日图 | 百分比条形（饼图仅 ≤5 类） |
+| 流向与转化 | 桑基图 / 漏斗图 | 两列对比条形 + 转化表 |
+| 进度与排期 | 甘特图 / 时间线 | 里程碑表 |
+| 多维比较与权衡 | 平行坐标 / 雷达图 / 斜率图 | 小倍数图 |
+| 统计推断与不确定性 | 误差棒 / 置信带 / 森林图 | 文字给区间 + 样本量 |
+| 空间分布与场（2D） | 等高线 / 相图 / choropleth | 分块示意图 |
 
 **3D 启用门槛**：仅当空间结构本身承载信息（旋转→振荡、螺旋、场、曲面、轨道）时启用；2D 能讲清的不上 3D。
 
@@ -204,6 +213,7 @@ gh release create vX.Y.Z dist/<zip> README.md USER_GUIDE.md TECHNICAL.md --notes
 
 ## 7. 版本
 
+- v1.6.0（2026-10-29）：图表类型扩容：新增 references/chart-catalog.md（25 种图表 + 按问题选图 + 反模式）与 scripts/chart_gallery.py 真机画廊；选型矩阵扩至 20 行；修复 networkx/Sankey 中文标签方框（font.sans-serif）
 - v1.5.9（2026-10-26）：重写三份文档（README 门面 + USER_GUIDE 用户手册 + TECHNICAL 技术手册），新增 docs/images 概念图与生成脚本；package.py 改为原子递增并支持三份手册同步（修复「VERSION 已递增但手册未更新」的半成品缺陷）；新增三处回归断言（文档存在性 / 配图存在性 / 五处版本号一致）
 - v1.5.8（2026-10-07）：第六批三视角对抗性审查（R7-1~R7-6）——修复 Blender 决策清单三处判定缺陷（glb 通道未含 trimesh、把探测不到当装不了、降级把能力塞给做不了的库），新增 viz-Blender决策清单 回归断言并做反永真验证
 - v1.5.7（2026-10-07）：SKILL.md / TECHNICAL.md 新增「3D 与 Blender 调用决策清单」四道闸 + 两种出口优先级 + 两条硬规则
